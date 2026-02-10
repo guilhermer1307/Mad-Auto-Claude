@@ -181,6 +181,24 @@ export function registerTaskExecutionHandlers(
 
       console.warn('[TASK_START] Found task:', task.specId, 'status:', task.status, 'reviewReason:', task.reviewReason, 'subtasks:', task.subtasks.length);
 
+      // Check if task has unsatisfied dependencies
+      if (task.metadata?.taskDependencies?.length) {
+        const allTasks = projectStore.getTasks(project.id);
+        const unmetDeps = task.metadata.taskDependencies.filter(depId => {
+          const depTask = allTasks.find(t => t.specId === depId);
+          return !depTask || (depTask.status !== 'done' && depTask.status !== 'pr_created');
+        });
+        if (unmetDeps.length > 0) {
+          console.warn('[TASK_START] Task has unmet dependencies:', unmetDeps);
+          mainWindow.webContents.send(
+            IPC_CHANNELS.TASK_ERROR,
+            taskId,
+            `This task has ${unmetDeps.length} unmet dependency(ies). Wait for dependent tasks to finish or remove the dependencies.`
+          );
+          return;
+        }
+      }
+
       // Immediately mark as started so the UI moves the card to In Progress.
       // Use XState actor state as source of truth (if actor exists), with task data as fallback.
       // - plan_review: User approved the plan, send PLAN_APPROVED to transition to coding
@@ -278,7 +296,9 @@ export function registerTaskExecutionHandlers(
             workers: 1,
             baseBranch,
             useWorktree: task.metadata?.useWorktree,
-            useLocalBranch: task.metadata?.useLocalBranch
+            useLocalBranch: task.metadata?.useLocalBranch,
+            skipPlanning: task.metadata?.skipPlanning,
+            skipQA: task.metadata?.skipQA
           },
           project.id
         );
@@ -296,7 +316,9 @@ export function registerTaskExecutionHandlers(
             workers: 1,
             baseBranch,
             useWorktree: task.metadata?.useWorktree,
-            useLocalBranch: task.metadata?.useLocalBranch
+            useLocalBranch: task.metadata?.useLocalBranch,
+            skipPlanning: task.metadata?.skipPlanning,
+            skipQA: task.metadata?.skipQA
           },
           project.id
         );

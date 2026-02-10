@@ -1027,6 +1027,138 @@
   --shadow-focus: 0 0 0 3px rgba(74, 222, 128, 0.3);
 }
 
+/* ============================================
+   GRUVBOX THEME - Warm, retro-groove color scheme
+   ============================================ */
+
+/* Gruvbox Light */
+[data-theme="gruvbox"] {
+  /* Backgrounds - gruvbox light bg */
+  --background: #FBF1C7;
+  --foreground: #3C3836;
+
+  /* Card surfaces */
+  --card: #F9F5D7;
+  --card-foreground: #3C3836;
+
+  /* Primary accent - gruvbox orange */
+  --primary: #D65D0E;
+  --primary-foreground: #FBF1C7;
+
+  /* Secondary */
+  --secondary: #EBDBB2;
+  --secondary-foreground: #3C3836;
+
+  /* Muted */
+  --muted: #F2E5BC;
+  --muted-foreground: #7C6F64;
+
+  /* Accent */
+  --accent: #EBDBB2;
+  --accent-foreground: #AF3A03;
+
+  /* Destructive - gruvbox red */
+  --destructive: #CC241D;
+  --destructive-foreground: #FBF1C7;
+
+  /* Borders and inputs */
+  --border: #D5C4A1;
+  --input: #D5C4A1;
+  --ring: #D65D0E;
+
+  /* Sidebar */
+  --sidebar: #F9F5D7;
+  --sidebar-foreground: #3C3836;
+
+  /* Popover */
+  --popover: #F9F5D7;
+  --popover-foreground: #3C3836;
+
+  /* Semantic colors */
+  --success: #98971A;
+  --success-foreground: #FBF1C7;
+  --success-light: #F0EDCB;
+  --warning: #D79921;
+  --warning-foreground: #3C3836;
+  --warning-light: #F5EDCE;
+  --info: #458588;
+  --info-foreground: #FBF1C7;
+  --info-light: #E0ECE4;
+  --error: #CC241D;
+  --error-light: #F5D5D0;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(60, 56, 54, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(60, 56, 54, 0.08), 0 2px 4px -2px rgba(60, 56, 54, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(60, 56, 54, 0.1), 0 4px 6px -4px rgba(60, 56, 54, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(60, 56, 54, 0.1), 0 8px 10px -6px rgba(60, 56, 54, 0.04);
+  --shadow-focus: 0 0 0 3px rgba(214, 93, 14, 0.25);
+}
+
+/* Gruvbox Dark */
+[data-theme="gruvbox"].dark {
+  /* Backgrounds - gruvbox dark bg */
+  --background: #282828;
+  --foreground: #EBDBB2;
+
+  /* Card surfaces */
+  --card: #3C3836;
+  --card-foreground: #EBDBB2;
+
+  /* Primary accent - gruvbox bright orange */
+  --primary: #FE8019;
+  --primary-foreground: #282828;
+
+  /* Secondary */
+  --secondary: #504945;
+  --secondary-foreground: #EBDBB2;
+
+  /* Muted */
+  --muted: #1D2021;
+  --muted-foreground: #A89984;
+
+  /* Accent */
+  --accent: #504945;
+  --accent-foreground: #FE8019;
+
+  /* Destructive - gruvbox bright red */
+  --destructive: #FB4934;
+  --destructive-foreground: #282828;
+
+  /* Borders and inputs */
+  --border: #504945;
+  --input: #504945;
+  --ring: #FE8019;
+
+  /* Sidebar */
+  --sidebar: #1D2021;
+  --sidebar-foreground: #EBDBB2;
+
+  /* Popover */
+  --popover: #3C3836;
+  --popover-foreground: #EBDBB2;
+
+  /* Semantic colors - gruvbox bright variants */
+  --success: #B8BB26;
+  --success-foreground: #282828;
+  --success-light: #3D3A1E;
+  --warning: #FABD2F;
+  --warning-foreground: #282828;
+  --warning-light: #3D371E;
+  --info: #83A598;
+  --info-foreground: #282828;
+  --info-light: #2E3B36;
+  --error: #FB4934;
+  --error-light: #3C2020;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8);
+  --shadow-focus: 0 0 0 3px rgba(254, 128, 25, 0.3);
+}
+
 /* Base styles */
 * {
   border-color: var(--border);

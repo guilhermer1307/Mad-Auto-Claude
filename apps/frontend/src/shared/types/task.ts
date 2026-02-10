@@ -154,6 +154,11 @@ export interface TaskDraft {
   images: ImageAttachment[];
   referencedFiles: ReferencedFile[];
   requireReviewBeforeCoding?: boolean;
+  // Pipeline skip options
+  skipPlanning?: boolean;
+  skipQA?: boolean;
+  // Task dependencies (specIds that must complete before this task starts)
+  taskDependencies?: string[];
   savedAt: Date;
 }
 
@@ -224,6 +229,13 @@ export interface TaskMetadata {
 
   // Review settings
   requireReviewBeforeCoding?: boolean;  // Require human review of spec/plan before coding starts
+
+  // Pipeline skip options
+  skipPlanning?: boolean;  // Skip planning phase — coder works directly from spec
+  skipQA?: boolean;        // Skip QA validation after build completes
+
+  // Task execution dependencies (specIds of tasks that must complete before this starts)
+  taskDependencies?: string[];
 
   // Agent configuration (from agent profile or manual selection)
   model?: ModelType;  // Claude model to use (haiku, sonnet, opus) - used when not auto profile

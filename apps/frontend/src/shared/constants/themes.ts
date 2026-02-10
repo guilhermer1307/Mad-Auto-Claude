@@ -55,5 +55,11 @@ export const COLOR_THEMES: ColorThemeDefinition[] = [
     name: 'Forest',
     description: 'Natural, earthy green tones',
     previewColors: { bg: '#DCFCE7', accent: '#16A34A', darkBg: '#052E16' }
+  },
+  {
+    id: 'gruvbox',
+    name: 'Gruvbox',
+    description: 'Warm, retro-groove color scheme',
+    previewColors: { bg: '#FBF1C7', accent: '#D65D0E', darkBg: '#282828', darkAccent: '#FE8019' }
   }
 ];

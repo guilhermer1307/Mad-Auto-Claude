@@ -86,6 +86,12 @@ interface TaskFormFieldsProps {
   requireReviewBeforeCoding: boolean;
   onRequireReviewChange: (require: boolean) => void;
 
+  // Pipeline skip options
+  skipPlanning: boolean;
+  onSkipPlanningChange: (skip: boolean) => void;
+  skipQA: boolean;
+  onSkipQAChange: (skip: boolean) => void;
+
   // Form state
   disabled?: boolean;
   error?: string | null;
@@ -135,6 +141,10 @@ export function TaskFormFields({
   onImagesChange,
   requireReviewBeforeCoding,
   onRequireReviewChange,
+  skipPlanning,
+  onSkipPlanningChange,
+  skipQA,
+  onSkipQAChange,
   disabled = false,
   error,
   onError,
@@ -529,6 +539,50 @@ export function TaskFormFields({
             </Label>
             <p className="text-xs text-muted-foreground">
               {t('tasks:form.requireReviewDescription')}
+            </p>
+          </div>
+        </div>
+
+        {/* Skip Planning Toggle */}
+        <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-muted/30">
+          <Checkbox
+            id={`${prefix}skip-planning`}
+            checked={skipPlanning}
+            onCheckedChange={(checked) => onSkipPlanningChange(checked === true)}
+            disabled={disabled}
+            className="mt-0.5"
+          />
+          <div className="flex-1 space-y-1">
+            <Label
+              htmlFor={`${prefix}skip-planning`}
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
+              {t('tasks:form.skipPlanningLabel')}
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {t('tasks:form.skipPlanningDescription')}
+            </p>
+          </div>
+        </div>
+
+        {/* Skip QA Toggle */}
+        <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-muted/30">
+          <Checkbox
+            id={`${prefix}skip-qa`}
+            checked={skipQA}
+            onCheckedChange={(checked) => onSkipQAChange(checked === true)}
+            disabled={disabled}
+            className="mt-0.5"
+          />
+          <div className="flex-1 space-y-1">
+            <Label
+              htmlFor={`${prefix}skip-qa`}
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
+              {t('tasks:form.skipQALabel')}
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {t('tasks:form.skipQADescription')}
             </p>
           </div>
         </div>

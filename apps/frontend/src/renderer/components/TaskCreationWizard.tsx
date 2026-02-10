@@ -12,7 +12,7 @@
  */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, ChevronDown, ChevronUp, RotateCcw, FolderTree, GitBranch, Info } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, RotateCcw, FolderTree, GitBranch, Info, Link, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Combobox } from './ui/combobox';
@@ -21,8 +21,9 @@ import { TaskFormFields } from './task-form/TaskFormFields';
 import { type FileReferenceData } from './task-form/useImageUpload';
 import { TaskFileExplorerDrawer } from './TaskFileExplorerDrawer';
 import { FileAutocomplete } from './FileAutocomplete';
-import { createTask, saveDraft, loadDraft, clearDraft, isDraftEmpty } from '../stores/task-store';
+import { createTask, saveDraft, loadDraft, clearDraft, isDraftEmpty, useTaskStore } from '../stores/task-store';
 import { useProjectStore } from '../stores/project-store';
+import { detectCircularDependency } from '../lib/dependency-utils';
 import { buildBranchOptions } from '../lib/branch-utils';
 import { cn } from '../lib/utils';
 import type { TaskCategory, TaskPriority, TaskComplexity, TaskImpact, TaskMetadata, ImageAttachment, TaskDraft, ModelType, ThinkingLevel, ReferencedFile, GitBranchDetail } from '../../shared/types';
@@ -123,6 +124,22 @@ export function TaskCreationWizard({
   // Review setting
   const [requireReviewBeforeCoding, setRequireReviewBeforeCoding] = useState(false);
 
+  // Pipeline skip options
+  const [skipPlanning, setSkipPlanning] = useState(false);
+  const [skipQA, setSkipQA] = useState(false);
+
+  // Task dependencies (specIds of tasks that must complete before this one starts)
+  const [taskDependencies, setTaskDependencies] = useState<string[]>([]);
+  const [showDependencies, setShowDependencies] = useState(false);
+  const [depSearchQuery, setDepSearchQuery] = useState('');
+
+  // Get existing tasks for the dependency picker
+  const existingTasks = useTaskStore((state) => state.tasks);
+  const availableDependencyTasks = useMemo(() =>
+    existingTasks.filter(t => !t.metadata?.archivedAt && t.projectId === projectId),
+    [existingTasks, projectId]
+  );
+
   // Draft state
   const [isDraftRestored, setIsDraftRestored] = useState(false);
 
@@ -161,6 +178,9 @@ export function TaskCreationWizard({
         setImages(draft.images);
         setReferencedFiles(draft.referencedFiles ?? []);
         setRequireReviewBeforeCoding(draft.requireReviewBeforeCoding ?? false);
+        setSkipPlanning(draft.skipPlanning ?? false);
+        setSkipQA(draft.skipQA ?? false);
+        setTaskDependencies(draft.taskDependencies ?? []);
         setIsDraftRestored(true);
 
         if (draft.category || draft.priority || draft.complexity || draft.impact) {
@@ -183,6 +203,9 @@ export function TaskCreationWizard({
         setImages([]);
         setReferencedFiles([]);
         setRequireReviewBeforeCoding(false);
+        setSkipPlanning(false);
+        setSkipQA(false);
+        setTaskDependencies([]);
         setBaseBranch(PROJECT_DEFAULT_BRANCH);
         setUseWorktree(true);
         setIsDraftRestored(false);
@@ -259,8 +282,11 @@ export function TaskCreationWizard({
     images,
     referencedFiles,
     requireReviewBeforeCoding,
+    skipPlanning,
+    skipQA,
+    taskDependencies,
     savedAt: new Date()
-  }), [projectId, title, description, category, priority, complexity, impact, profileId, model, thinkingLevel, phaseModels, phaseThinking, images, referencedFiles, requireReviewBeforeCoding]);
+  }), [projectId, title, description, category, priority, complexity, impact, profileId, model, thinkingLevel, phaseModels, phaseThinking, images, referencedFiles, requireReviewBeforeCoding, skipPlanning, skipQA, taskDependencies]);
 
   /**
    * Detect @ mention being typed and show autocomplete
@@ -429,6 +455,17 @@ export function TaskCreationWizard({
       if (images.length > 0) metadata.attachedImages = images;
       if (allReferencedFiles.length > 0) metadata.referencedFiles = allReferencedFiles;
       if (requireReviewBeforeCoding) metadata.requireReviewBeforeCoding = true;
+      if (skipPlanning) metadata.skipPlanning = true;
+      if (skipQA) metadata.skipQA = true;
+      if (taskDependencies.length > 0) {
+        // Validate no circular dependencies
+        if (detectCircularDependency(taskDependencies, existingTasks)) {
+          setError(t('tasks:dependencies.circularError'));
+          setIsCreating(false);
+          return;
+        }
+        metadata.taskDependencies = taskDependencies;
+      }
       // Always include baseBranch - resolve PROJECT_DEFAULT_BRANCH to actual branch name
       // This ensures the backend always knows which branch to use for worktree creation
       if (baseBranch === PROJECT_DEFAULT_BRANCH) {
@@ -474,6 +511,9 @@ export function TaskCreationWizard({
     setImages([]);
     setReferencedFiles([]);
     setRequireReviewBeforeCoding(false);
+    setSkipPlanning(false);
+    setSkipQA(false);
+    setTaskDependencies([]);
     setBaseBranch(PROJECT_DEFAULT_BRANCH);
     setUseWorktree(true);
     setError(null);
@@ -656,6 +696,10 @@ export function TaskCreationWizard({
           onImagesChange={setImages}
           requireReviewBeforeCoding={requireReviewBeforeCoding}
           onRequireReviewChange={setRequireReviewBeforeCoding}
+          skipPlanning={skipPlanning}
+          onSkipPlanningChange={setSkipPlanning}
+          skipQA={skipQA}
+          onSkipQAChange={setSkipQA}
           disabled={isCreating}
           error={error}
           onError={setError}
@@ -726,6 +770,137 @@ export function TaskCreationWizard({
               <p className="text-xs text-muted-foreground">
                 {t('tasks:wizard.gitOptions.helpText')}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Dependencies Toggle */}
+        <button
+          type="button"
+          onClick={() => setShowDependencies(!showDependencies)}
+          className={cn(
+            'flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors',
+            'w-full justify-between py-2 px-3 rounded-md hover:bg-muted/50'
+          )}
+          disabled={isCreating}
+          aria-expanded={showDependencies}
+          aria-controls="dependencies-section"
+        >
+          <span className="flex items-center gap-2">
+            <Link className="h-4 w-4" />
+            {t('tasks:dependencies.title')}
+            {taskDependencies.length > 0 && (
+              <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                {taskDependencies.length}
+              </span>
+            )}
+          </span>
+          {showDependencies ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </button>
+
+        {/* Dependencies Section */}
+        {showDependencies && (
+          <div id="dependencies-section" className="space-y-4 p-4 rounded-lg border border-border bg-muted/30">
+            <p className="text-xs text-muted-foreground">
+              {t('tasks:dependencies.description')}
+            </p>
+
+            {/* Search/filter input */}
+            <input
+              type="text"
+              placeholder={t('tasks:dependencies.searchPlaceholder')}
+              value={depSearchQuery}
+              onChange={(e) => setDepSearchQuery(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              disabled={isCreating}
+            />
+
+            {/* Selected dependencies as chips */}
+            {taskDependencies.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {taskDependencies.map(depId => {
+                  const depTask = availableDependencyTasks.find(t => t.specId === depId);
+                  return (
+                    <span
+                      key={depId}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs px-2.5 py-1"
+                    >
+                      {depTask ? (depTask.title || depTask.specId) : depId}
+                      <button
+                        type="button"
+                        onClick={() => setTaskDependencies(prev => prev.filter(id => id !== depId))}
+                        className="hover:bg-primary/20 rounded-full p-0.5"
+                        aria-label={t('tasks:dependencies.remove')}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Available tasks list */}
+            <div className="max-h-48 overflow-y-auto rounded-md border border-border">
+              {availableDependencyTasks.filter(t => {
+                // Filter out already selected tasks
+                if (taskDependencies.includes(t.specId)) return false;
+                // Filter by search query
+                if (depSearchQuery) {
+                  const query = depSearchQuery.toLowerCase();
+                  return (
+                    t.title.toLowerCase().includes(query) ||
+                    t.specId.toLowerCase().includes(query) ||
+                    t.description?.toLowerCase().includes(query)
+                  );
+                }
+                return true;
+              }).length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  {availableDependencyTasks.length === 0
+                    ? t('tasks:dependencies.noTasksAvailable')
+                    : t('tasks:dependencies.noDependencies')
+                  }
+                </div>
+              ) : (
+                availableDependencyTasks
+                  .filter(t => {
+                    if (taskDependencies.includes(t.specId)) return false;
+                    if (depSearchQuery) {
+                      const query = depSearchQuery.toLowerCase();
+                      return (
+                        t.title.toLowerCase().includes(query) ||
+                        t.specId.toLowerCase().includes(query) ||
+                        t.description?.toLowerCase().includes(query)
+                      );
+                    }
+                    return true;
+                  })
+                  .map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 hover:bg-muted/50 border-b border-border last:border-b-0 transition-colors"
+                      onClick={() => setTaskDependencies(prev => [...prev, t.specId])}
+                      disabled={isCreating}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0">
+                          <span className="text-sm font-medium truncate block">
+                            {t.title || t.specId}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {t.specId} &middot; {t.status}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+              )}
             </div>
           </div>
         )}

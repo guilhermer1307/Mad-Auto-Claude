@@ -59,7 +59,8 @@ def handle_build_command(
     force_direct: bool,
     auto_continue: bool,
     skip_qa: bool,
-    force_bypass_approval: bool,
+    skip_planning: bool = False,
+    force_bypass_approval: bool = False,
     base_branch: str | None = None,
 ) -> None:
     """
@@ -75,6 +76,7 @@ def handle_build_command(
         force_direct: Force direct workspace mode
         auto_continue: Auto-continue mode (non-interactive)
         skip_qa: Skip automatic QA validation
+        skip_planning: Skip the planner agent phase
         force_bypass_approval: Force bypass approval check
         base_branch: Base branch for worktree creation (default: current branch)
     """
@@ -86,7 +88,7 @@ def handle_build_command(
         debug_section,
         debug_success,
     )
-    from phase_config import get_phase_model
+    from phase_config import get_phase_model, load_task_metadata
     from prompts_pkg.prompts import (
         get_base_branch_from_metadata,
         get_use_local_branch_from_metadata,
@@ -225,6 +227,14 @@ def handle_build_command(
         if localized_spec_dir:
             spec_dir = localized_spec_dir
 
+    # Check task_metadata.json for skip flags (OR with CLI flags)
+    task_metadata = load_task_metadata(spec_dir)
+    if task_metadata:
+        if task_metadata.get("skipPlanning"):
+            skip_planning = True
+        if task_metadata.get("skipQA"):
+            skip_qa = True
+
     # Run the autonomous agent
     debug_section("run.py", "Starting Build Execution")
     debug(
@@ -234,6 +244,8 @@ def handle_build_command(
         workspace_mode=str(workspace_mode),
         working_dir=str(working_dir),
         spec_dir=str(spec_dir),
+        skip_planning=str(skip_planning),
+        skip_qa=str(skip_qa),
     )
 
     try:
@@ -247,6 +259,7 @@ def handle_build_command(
                 max_iterations=max_iterations,
                 verbose=verbose,
                 source_spec_dir=source_spec_dir,  # For syncing progress back to main project
+                skip_planning=skip_planning,
             )
         )
         debug_success("run.py", "Agent execution completed")

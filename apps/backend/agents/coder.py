@@ -360,6 +360,58 @@ def parse_rate_limit_reset_time(error_info: dict | None) -> int | None:
     return None
 
 
+def _create_minimal_plan(spec_dir: Path) -> None:
+    """
+    Create a minimal implementation plan with a single subtask for skip-planning mode.
+
+    When the user skips planning, we create a plan with one phase and one subtask
+    that instructs the coder to implement the full specification.
+    """
+    from datetime import datetime
+
+    from core.file_utils import write_json_atomic
+
+    spec_file = spec_dir / "spec.md"
+    spec_name = spec_dir.name
+
+    plan = {
+        "feature": spec_name,
+        "workflow_type": "feature",
+        "services_involved": [],
+        "phases": [
+            {
+                "phase": 0,
+                "name": "Implementation",
+                "type": "implementation",
+                "subtasks": [
+                    {
+                        "id": "0.1",
+                        "description": "Implement the full specification as described in spec.md",
+                        "status": "pending",
+                        "files_to_modify": [],
+                        "files_to_create": [],
+                        "verification": {
+                            "type": "command",
+                            "run": "echo 'Verify implementation matches spec'"
+                        },
+                    }
+                ],
+            }
+        ],
+        "final_acceptance": [
+            "All changes described in the spec are implemented",
+            "Code compiles/runs without errors",
+        ],
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+        "spec_file": str(spec_file),
+    }
+
+    plan_file = spec_dir / "implementation_plan.json"
+    write_json_atomic(plan_file, plan)
+    print_status(f"Created minimal plan at {plan_file.name}", "success")
+
+
 async def run_autonomous_agent(
     project_dir: Path,
     spec_dir: Path,
@@ -367,6 +419,7 @@ async def run_autonomous_agent(
     max_iterations: int | None = None,
     verbose: bool = False,
     source_spec_dir: Path | None = None,
+    skip_planning: bool = False,
 ) -> None:
     """
     Run the autonomous agent loop with automatic memory management.
@@ -381,6 +434,7 @@ async def run_autonomous_agent(
         max_iterations: Maximum number of iterations (None for unlimited)
         verbose: Whether to show detailed output
         source_spec_dir: Original spec directory in main project (for syncing from worktree)
+        skip_planning: Skip the planner phase and create a minimal plan from spec
     """
     # Set environment variable for security hooks to find the correct project directory
     # This is needed because os.getcwd() may return the wrong directory in worktree mode
@@ -446,7 +500,29 @@ async def run_autonomous_agent(
 
         return False, result.errors
 
-    if first_run:
+    if first_run and skip_planning:
+        # Skip planning: create a minimal plan with a single subtask
+        print_status(
+            "Skip planning enabled - creating minimal plan from spec", "info"
+        )
+        _create_minimal_plan(spec_dir)
+        first_run = False
+        is_planning_phase = False
+        current_log_phase = LogPhase.CODING
+
+        # Start coding phase directly
+        status_manager.update(state=BuildState.BUILDING)
+        emit_phase(ExecutionPhase.CODING, "Starting implementation (planning skipped)")
+
+        if task_logger:
+            task_logger.start_phase(LogPhase.CODING, "Starting implementation (planning skipped)...")
+
+        # Update Linear to "In Progress" when build starts
+        if linear_task and linear_task.task_id:
+            print_status("Updating Linear task to In Progress...", "progress")
+            await linear_task_started(spec_dir)
+
+    elif first_run:
         print_status(
             "Fresh start - will use Planner Agent to create implementation plan", "info"
         )

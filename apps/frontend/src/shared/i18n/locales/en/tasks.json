@@ -253,6 +253,10 @@
     "classificationOptional": "Classification (optional)",
     "requireReviewLabel": "Require human review before coding",
     "requireReviewDescription": "When enabled, you'll be prompted to review the spec and implementation plan before the coding phase begins. This allows you to approve, request changes, or provide feedback.",
+    "skipPlanningLabel": "Skip planning phase",
+    "skipPlanningDescription": "Go directly to coding without running the planner agent. Useful for simple or well-specified tasks.",
+    "skipQALabel": "Skip QA validation",
+    "skipQADescription": "Skip the automated QA review/fix cycle after coding completes. The build moves directly to human review.",
     "errors": {
       "descriptionRequired": "Please provide a description",
       "maxImagesReached": "Maximum of 5 images allowed",
@@ -299,6 +303,19 @@
         }
       }
     }
+  },
+  "dependencies": {
+    "title": "Dependencies (optional)",
+    "description": "Select tasks that must complete before this task starts.",
+    "searchPlaceholder": "Search tasks...",
+    "noDependencies": "No dependencies selected",
+    "noTasksAvailable": "No available tasks",
+    "blockedBy": "Blocked ({{count}} dep)",
+    "blockedBy_plural": "Blocked ({{count}} deps)",
+    "satisfied": "Dependencies met",
+    "remove": "Remove",
+    "blockedStartError": "This task has unmet dependencies. Wait for dependent tasks to finish or remove the dependencies.",
+    "circularError": "Cannot add these dependencies — it would create a circular chain."
   },
   "subtasks": {
     "untitled": "Untitled subtask"

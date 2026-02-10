@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 import type { Task, TaskStatus, TaskOrderState } from '../../shared/types';
+import { areDependenciesSatisfied } from '../lib/dependency-utils';
 
 // Type guard for valid drop column targets - preserves literal type from TASK_STATUS_COLUMNS
 const VALID_DROP_COLUMNS = new Set<string>(TASK_STATUS_COLUMNS);
@@ -1083,8 +1084,11 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
           t.status === 'queue' && !t.metadata?.archivedAt && !attemptedTaskIds.has(t.id)
         );
 
-        // Stop if no capacity, no queued tasks, or too many consecutive failures
-        if (inProgressCount >= maxParallelTasks || queuedTasks.length === 0) {
+        // Filter out tasks with unsatisfied dependencies
+        const eligibleTasks = queuedTasks.filter(t => areDependenciesSatisfied(t, currentTasks));
+
+        // Stop if no capacity, no eligible tasks, or too many consecutive failures
+        if (inProgressCount >= maxParallelTasks || eligibleTasks.length === 0) {
           break;
         }
 
@@ -1093,8 +1097,8 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
           break;
         }
 
-        // Get the oldest task in queue (FIFO ordering)
-        const nextTask = queuedTasks.sort((a, b) => {
+        // Get the oldest eligible task in queue (FIFO ordering, dependencies satisfied)
+        const nextTask = eligibleTasks.sort((a, b) => {
           const dateA = new Date(a.createdAt).getTime();
           const dateB = new Date(b.createdAt).getTime();
           return dateA - dateB; // Ascending order (oldest first)
@@ -1131,6 +1135,11 @@ export function KanbanBoard({ tasks, onTaskClick, onNewTaskClick, onRefresh, isR
         // When a task leaves in_progress (e.g., goes to human_review), process the queue
         if (oldStatus === 'in_progress' && newStatus !== 'in_progress') {
           console.log(`[Queue] Task ${taskId} left in_progress, processing queue to fill slot`);
+          processQueue();
+        }
+        // When a task completes (done/pr_created), process queue to unblock dependent tasks
+        if (newStatus === 'done' || newStatus === 'pr_created') {
+          console.log(`[Queue] Task ${taskId} completed, checking for unblocked dependencies`);
           processQueue();
         }
       }

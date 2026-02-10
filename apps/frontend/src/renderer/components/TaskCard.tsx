@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Square, Clock, Zap, Target, Shield, Gauge, Palette, FileCode, Bug, Wrench, Loader2, AlertTriangle, RotateCcw, Archive, GitPullRequest, MoreVertical } from 'lucide-react';
+import { Play, Square, Clock, Zap, Target, Shield, Gauge, Palette, FileCode, Bug, Wrench, Loader2, AlertTriangle, RotateCcw, Archive, GitPullRequest, MoreVertical, Link } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -31,7 +31,8 @@ import {
   JSON_ERROR_PREFIX,
   JSON_ERROR_TITLE_SUFFIX
 } from '../../shared/constants';
-import { startTask, stopTask, checkTaskRunning, recoverStuckTask, isIncompleteHumanReview, archiveTasks, hasRecentActivity } from '../stores/task-store';
+import { startTask, stopTask, checkTaskRunning, recoverStuckTask, isIncompleteHumanReview, archiveTasks, hasRecentActivity, useTaskStore } from '../stores/task-store';
+import { areDependenciesSatisfied, getUnsatisfiedDependencyNames } from '../lib/dependency-utils';
 import type { Task, TaskCategory, ReviewReason, TaskStatus } from '../../shared/types';
 
 // Category icon mapping
@@ -142,6 +143,12 @@ export const TaskCard = memo(function TaskCard({
 
   // Check if task is in human_review but has no completed subtasks (crashed/incomplete)
   const isIncomplete = isIncompleteHumanReview(task);
+
+  // Dependency status for badge display
+  const allTasks = useTaskStore((state) => state.tasks);
+  const hasDependencies = Boolean(task.metadata?.taskDependencies?.length);
+  const depsSatisfied = hasDependencies ? areDependenciesSatisfied(task, allTasks) : true;
+  const unsatisfiedNames = hasDependencies && !depsSatisfied ? getUnsatisfiedDependencyNames(task, allTasks) : [];
 
   // Memoize expensive computations to avoid running on every render
   // Truncate description for card display - full description shown in modal
@@ -477,6 +484,26 @@ export const TaskCard = memo(function TaskCard({
                 className={cn('text-[10px] px-1.5 py-0', TASK_IMPACT_COLORS[task.metadata.securitySeverity])}
               >
                 {task.metadata.securitySeverity} {t('metadata.severity')}
+              </Badge>
+            )}
+            {/* Dependency status badge */}
+            {hasDependencies && !depsSatisfied && (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 border-orange-500/50 text-orange-600 dark:text-orange-400"
+                title={unsatisfiedNames.join(', ')}
+              >
+                <Link className="h-2.5 w-2.5 mr-0.5" />
+                {t('dependencies.blockedBy', { count: unsatisfiedNames.length })}
+              </Badge>
+            )}
+            {hasDependencies && depsSatisfied && (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 border-green-500/50 text-green-600 dark:text-green-400"
+              >
+                <Link className="h-2.5 w-2.5 mr-0.5" />
+                {t('dependencies.satisfied')}
               </Badge>
             )}
           </div>

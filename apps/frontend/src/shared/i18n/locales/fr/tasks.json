@@ -252,6 +252,10 @@
     "classificationOptional": "Classification (optionnel)",
     "requireReviewLabel": "Exiger une révision humaine avant le codage",
     "requireReviewDescription": "Lorsque activé, vous serez invité à réviser la spécification et le plan d'implémentation avant le début de la phase de codage. Cela vous permet d'approuver, de demander des modifications ou de fournir des commentaires.",
+    "skipPlanningLabel": "Passer la phase de planification",
+    "skipPlanningDescription": "Passer directement au codage sans exécuter l'agent de planification. Utile pour les tâches simples ou bien spécifiées.",
+    "skipQALabel": "Passer la validation QA",
+    "skipQADescription": "Passer le cycle de révision/correction QA automatisé après le codage. La tâche passe directement à la révision humaine.",
     "errors": {
       "descriptionRequired": "Veuillez fournir une description",
       "maxImagesReached": "Maximum de 5 images autorisé",
@@ -298,6 +302,19 @@
         }
       }
     }
+  },
+  "dependencies": {
+    "title": "Dépendances (optionnel)",
+    "description": "Sélectionnez les tâches qui doivent être terminées avant le démarrage de cette tâche.",
+    "searchPlaceholder": "Rechercher des tâches...",
+    "noDependencies": "Aucune dépendance sélectionnée",
+    "noTasksAvailable": "Aucune tâche disponible",
+    "blockedBy": "Bloqué ({{count}} dép.)",
+    "blockedBy_plural": "Bloqué ({{count}} dép.)",
+    "satisfied": "Dépendances satisfaites",
+    "remove": "Supprimer",
+    "blockedStartError": "Cette tâche a des dépendances non satisfaites. Attendez que les tâches dépendantes se terminent ou supprimez les dépendances.",
+    "circularError": "Impossible d'ajouter ces dépendances — cela créerait une chaîne circulaire."
   },
   "subtasks": {
     "untitled": "Sous-tâche sans titre"

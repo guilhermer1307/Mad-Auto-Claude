@@ -207,6 +207,11 @@ Environment Variables:
         action="store_true",
         help="Skip automatic QA validation after build completes",
     )
+    parser.add_argument(
+        "--skip-planning",
+        action="store_true",
+        help="Skip the planner agent phase - go directly to coding from spec",
+    )
 
     # Follow-up options
     parser.add_argument(
@@ -475,6 +480,7 @@ def _run_cli() -> None:
         force_direct=args.direct,
         auto_continue=args.auto_continue,
         skip_qa=args.skip_qa,
+        skip_planning=args.skip_planning,
         force_bypass_approval=args.force,
         base_branch=args.base_branch,
     )

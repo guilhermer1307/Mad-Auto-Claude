@@ -398,6 +398,14 @@ export class AgentManager extends EventEmitter {
       args.push('--base-branch', options.baseBranch);
     }
 
+    // Pipeline skip options
+    if (options.skipQA) {
+      args.push('--skip-qa');
+    }
+    if (options.skipPlanning) {
+      args.push('--skip-planning');
+    }
+
     // Note: --parallel was removed from run.py CLI - parallel execution is handled internally by the agent
     // The options.parallel and options.workers are kept for future use or logging purposes
     // Note: Model configuration is read from task_metadata.json by the Python scripts,

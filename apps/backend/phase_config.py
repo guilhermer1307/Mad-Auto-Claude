@@ -100,6 +100,8 @@ class TaskMetadataConfig(TypedDict, total=False):
     model: str
     thinkingLevel: str
     fastMode: bool
+    skipPlanning: bool
+    skipQA: bool
 
 
 Phase = Literal["spec", "planning", "coding", "qa"]

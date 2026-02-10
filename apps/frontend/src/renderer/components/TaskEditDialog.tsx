@@ -120,6 +120,10 @@ export function TaskEditDialog({ task, open, onOpenChange, onSaved }: TaskEditDi
     task.metadata?.requireReviewBeforeCoding ?? false
   );
 
+  // Pipeline skip options
+  const [skipPlanning, setSkipPlanning] = useState(task.metadata?.skipPlanning ?? false);
+  const [skipQA, setSkipQA] = useState(task.metadata?.skipQA ?? false);
+
   // Reset form when task changes or dialog opens
   useEffect(() => {
     if (open) {
@@ -160,6 +164,8 @@ export function TaskEditDialog({ task, open, onOpenChange, onSaved }: TaskEditDi
 
       setImages(task.metadata?.attachedImages || []);
       setRequireReviewBeforeCoding(task.metadata?.requireReviewBeforeCoding ?? false);
+      setSkipPlanning(task.metadata?.skipPlanning ?? false);
+      setSkipQA(task.metadata?.skipQA ?? false);
       setError(null);
 
       // Auto-expand classification if it has content
@@ -204,6 +210,8 @@ export function TaskEditDialog({ task, open, onOpenChange, onSaved }: TaskEditDi
       model !== (task.metadata?.model || '') ||
       thinkingLevel !== (task.metadata?.thinkingLevel || '') ||
       requireReviewBeforeCoding !== (task.metadata?.requireReviewBeforeCoding ?? false) ||
+      skipPlanning !== (task.metadata?.skipPlanning ?? false) ||
+      skipQA !== (task.metadata?.skipQA ?? false) ||
       JSON.stringify(images) !== JSON.stringify(task.metadata?.attachedImages || []) ||
       JSON.stringify(phaseModels) !== JSON.stringify(task.metadata?.phaseModels || DEFAULT_PHASE_MODELS) ||
       JSON.stringify(phaseThinking) !== JSON.stringify(task.metadata?.phaseThinking || DEFAULT_PHASE_THINKING);
@@ -232,6 +240,10 @@ export function TaskEditDialog({ task, open, onOpenChange, onSaved }: TaskEditDi
     // Always set attachedImages to persist removal when all images are deleted
     metadataUpdates.attachedImages = images.length > 0 ? images : [];
     metadataUpdates.requireReviewBeforeCoding = requireReviewBeforeCoding;
+    metadataUpdates.skipPlanning = skipPlanning;
+    metadataUpdates.skipQA = skipQA;
+    // Preserve taskDependencies from original task metadata
+    if (task.metadata?.taskDependencies) metadataUpdates.taskDependencies = task.metadata.taskDependencies;
     // Preserve fastMode from original task metadata (set at creation from settings)
     if (task.metadata?.fastMode) metadataUpdates.fastMode = true;
 
@@ -313,6 +325,10 @@ export function TaskEditDialog({ task, open, onOpenChange, onSaved }: TaskEditDi
         onImagesChange={setImages}
         requireReviewBeforeCoding={requireReviewBeforeCoding}
         onRequireReviewChange={setRequireReviewBeforeCoding}
+        skipPlanning={skipPlanning}
+        onSkipPlanningChange={setSkipPlanning}
+        skipQA={skipQA}
+        onSkipQAChange={setSkipQA}
         disabled={isSaving}
         error={error}
         onError={setError}
