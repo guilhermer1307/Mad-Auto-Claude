@@ -175,6 +175,7 @@
     "openInIDE": "Open in IDE"
   },
   "metadata": {
+    "fastMode": "Fast",
     "severity": "severity",
     "pullRequest": "Pull Request",
     "showMore": "Show more",
@@ -221,7 +222,8 @@
       "useWorktreeDescription": "Creates changes in a separate git worktree for safe review before merging. Disable to build directly in your project (faster but riskier)."
     },
     "errors": {
-      "createFailed": "Failed to create task. Please try again."
+      "createFailed": "Failed to create task. Please try again.",
+      "startFailed": "Failed to start task"
     }
   },
   "feedback": {
@@ -257,6 +259,9 @@
     "skipPlanningDescription": "Go directly to coding without running the planner agent. Useful for simple or well-specified tasks.",
     "skipQALabel": "Skip QA validation",
     "skipQADescription": "Skip the automated QA review/fix cycle after coding completes. The build moves directly to human review.",
+    "fastModeLabel": "Fast Mode",
+    "fastModeDescription": "Same Opus 4.6 model with faster output. Higher cost per token.",
+    "fastModeNotice": "Requires \"extra usage\" enabled on your Claude subscription.",
     "errors": {
       "descriptionRequired": "Please provide a description",
       "maxImagesReached": "Maximum of 5 images allowed",

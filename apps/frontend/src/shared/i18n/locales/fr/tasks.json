@@ -2,6 +2,7 @@
   "refreshTasks": "Actualiser les tâches",
   "status": {
     "backlog": "Backlog",
+    "queue": "File d'attente",
     "todo": "À faire",
     "in_progress": "En cours",
     "review": "Révision",
@@ -174,6 +175,7 @@
     "openInIDE": "Ouvrir dans l'IDE"
   },
   "metadata": {
+    "fastMode": "Rapide",
     "severity": "sévérité",
     "pullRequest": "Pull Request",
     "showMore": "Afficher plus",
@@ -220,7 +222,8 @@
       "useWorktreeDescription": "Crée les changements dans un worktree git séparé pour une révision sécurisée avant la fusion. Désactivez pour travailler directement dans votre projet (plus rapide mais risqué)."
     },
     "errors": {
-      "createFailed": "Échec de la création de la tâche. Veuillez réessayer."
+      "createFailed": "Échec de la création de la tâche. Veuillez réessayer.",
+      "startFailed": "Échec du démarrage de la tâche"
     }
   },
   "feedback": {
@@ -256,6 +259,9 @@
     "skipPlanningDescription": "Passer directement au codage sans exécuter l'agent de planification. Utile pour les tâches simples ou bien spécifiées.",
     "skipQALabel": "Passer la validation QA",
     "skipQADescription": "Passer le cycle de révision/correction QA automatisé après le codage. La tâche passe directement à la révision humaine.",
+    "fastModeLabel": "Mode Rapide",
+    "fastModeDescription": "Même modèle Opus 4.6 avec une sortie plus rapide. Coût plus élevé par token.",
+    "fastModeNotice": "Nécessite « utilisation supplémentaire » activée sur votre abonnement Claude.",
     "errors": {
       "descriptionRequired": "Veuillez fournir une description",
       "maxImagesReached": "Maximum de 5 images autorisé",

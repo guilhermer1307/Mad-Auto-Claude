@@ -31,8 +31,9 @@ import {
   JSON_ERROR_PREFIX,
   JSON_ERROR_TITLE_SUFFIX
 } from '../../shared/constants';
-import { startTask, stopTask, checkTaskRunning, recoverStuckTask, isIncompleteHumanReview, archiveTasks, hasRecentActivity, useTaskStore } from '../stores/task-store';
+import { stopTask, checkTaskRunning, recoverStuckTask, isIncompleteHumanReview, archiveTasks, hasRecentActivity, startTaskOrQueue, useTaskStore } from '../stores/task-store';
 import { areDependenciesSatisfied, getUnsatisfiedDependencyNames } from '../lib/dependency-utils';
+import { useToast } from '../hooks/use-toast';
 import type { Task, TaskCategory, ReviewReason, TaskStatus } from '../../shared/types';
 
 // Category icon mapping
@@ -100,6 +101,7 @@ function taskCardPropsAreEqual(prevProps: TaskCardProps, nextProps: TaskCardProp
     prevTask.executionProgress?.phase === nextTask.executionProgress?.phase &&
     prevTask.executionProgress?.phaseProgress === nextTask.executionProgress?.phaseProgress &&
     prevTask.subtasks.length === nextTask.subtasks.length &&
+    prevTask.metadata?.fastMode === nextTask.metadata?.fastMode &&
     prevTask.metadata?.category === nextTask.metadata?.category &&
     prevTask.metadata?.complexity === nextTask.metadata?.complexity &&
     prevTask.metadata?.archivedAt === nextTask.metadata?.archivedAt &&
@@ -133,6 +135,7 @@ export const TaskCard = memo(function TaskCard({
   onToggleSelect
 }: TaskCardProps) {
   const { t } = useTranslation(['tasks', 'errors']);
+  const { toast } = useToast();
   const [isStuck, setIsStuck] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
   const stuckIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -230,12 +233,21 @@ export const TaskCard = memo(function TaskCard({
     };
   }, [task.id, isRunning]);
 
-  const handleStartStop = (e: React.MouseEvent) => {
+  const handleStartStop = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isRunning && !isStuck) {
       stopTask(task.id);
     } else {
-      startTask(task.id);
+      const result = await startTaskOrQueue(task.id);
+      if (!result.success) {
+        toast({
+          title: t('tasks:wizard.errors.startFailed'),
+          description: result.error,
+          variant: 'destructive',
+        });
+      } else if (result.action === 'queued') {
+        toast({ title: t('tasks:queue.movedToQueue') });
+      }
     }
   };
 
@@ -433,6 +445,16 @@ export const TaskCard = memo(function TaskCard({
                 className="text-[10px] px-1.5 py-0.5"
               >
                 {reviewReasonInfo.label}
+              </Badge>
+            )}
+            {/* Fast Mode badge */}
+            {task.metadata?.fastMode && (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0.5 flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+              >
+                <Zap className="h-2.5 w-2.5" />
+                {t('metadata.fastMode')}
               </Badge>
             )}
             {/* Category badge with icon */}
