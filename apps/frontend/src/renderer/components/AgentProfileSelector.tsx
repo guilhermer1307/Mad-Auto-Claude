@@ -15,7 +15,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue
 } from './ui/select';
@@ -25,7 +27,8 @@ import {
   THINKING_LEVELS,
   DEFAULT_PHASE_MODELS,
   DEFAULT_PHASE_THINKING,
-  ADAPTIVE_THINKING_MODELS
+  ADAPTIVE_THINKING_MODELS,
+  getModelsGroupedByProvider
 } from '../../shared/constants';
 import type { ModelType, ThinkingLevel } from '../../shared/types';
 import type { PhaseModelConfig, PhaseThinkingConfig } from '../../shared/types/settings';
@@ -287,10 +290,15 @@ export function AgentProfileSelector({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {AVAILABLE_MODELS.map((m) => (
-                            <SelectItem key={m.value} value={m.value}>
-                              {m.label}
-                            </SelectItem>
+                          {getModelsGroupedByProvider().map((group) => (
+                            <SelectGroup key={group.provider}>
+                              <SelectLabel className="text-[10px] font-semibold text-muted-foreground">{group.label}</SelectLabel>
+                              {group.models.map((m) => (
+                                <SelectItem key={m.value} value={m.value}>
+                                  {m.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
                           ))}
                         </SelectContent>
                       </Select>
@@ -353,10 +361,15 @@ export function AgentProfileSelector({
                 <SelectValue placeholder={t('agentProfile.selectModel')} />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_MODELS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
+                {getModelsGroupedByProvider().map((group) => (
+                  <SelectGroup key={group.provider}>
+                    <SelectLabel className="text-xs font-semibold text-muted-foreground">{group.label}</SelectLabel>
+                    {group.models.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>

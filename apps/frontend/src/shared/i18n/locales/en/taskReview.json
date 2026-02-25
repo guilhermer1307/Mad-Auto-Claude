@@ -25,6 +25,8 @@
     "alreadyMergedTitle": "Changes already in your branch",
     "alreadyMergedDescription": "These changes appear to already exist in your current branch. You can safely mark this task as done.",
     "alreadyMergedTooltip": "The task's changes are already present in your branch. Marking as done will clean up the worktree without merging.",
+    "checkConflictsThenMerge": "Checks for conflicts then merges the changes into your branch",
+    "targetBranch": "Target branch",
     "matchingFiles": "Matching files",
     "supersededTitle": "Changes superseded",
     "supersededDescription": "Your current branch has a newer version of these changes. Consider discarding this task or viewing the comparison.",

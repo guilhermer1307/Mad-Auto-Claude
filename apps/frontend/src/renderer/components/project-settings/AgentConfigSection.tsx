@@ -1,6 +1,6 @@
 import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { AVAILABLE_MODELS } from '../../../shared/constants';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select';
+import { getModelsGroupedByProvider } from '../../../shared/constants';
 import type { ProjectSettings } from '../../../shared/types';
 
 interface AgentConfigSectionProps {
@@ -22,10 +22,15 @@ export function AgentConfigSection({ settings, onUpdateSettings }: AgentConfigSe
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {AVAILABLE_MODELS.map((model) => (
-              <SelectItem key={model.value} value={model.value}>
-                {model.label}
-              </SelectItem>
+            {getModelsGroupedByProvider().map((group) => (
+              <SelectGroup key={group.provider}>
+                <SelectLabel className="text-xs font-semibold text-muted-foreground">{group.label}</SelectLabel>
+                {group.models.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             ))}
           </SelectContent>
         </Select>

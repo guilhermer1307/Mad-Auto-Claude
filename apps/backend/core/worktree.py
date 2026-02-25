@@ -5,7 +5,7 @@ Git Worktree Manager - Per-Spec Architecture
 
 Each spec gets its own worktree:
 - Worktree path: .auto-claude/worktrees/tasks/{spec-name}/
-- Branch name: auto-claude/{spec-name}
+- Branch name: feat/{spec-name}
 
 This allows:
 1. Multiple specs to be worked on simultaneously
@@ -178,7 +178,7 @@ class WorktreeManager:
     Manages per-spec Git worktrees.
 
     Each spec gets its own worktree in .auto-claude/worktrees/tasks/{spec-name}/ with
-    a corresponding branch auto-claude/{spec-name}.
+    a corresponding branch feat/{spec-name}.
     """
 
     # Timeout constants for subprocess operations
@@ -344,7 +344,7 @@ class WorktreeManager:
 
     def get_branch_name(self, spec_name: str) -> str:
         """Get the branch name for a spec."""
-        return f"auto-claude/{spec_name}"
+        return f"feat/{spec_name}"
 
     def worktree_exists(self, spec_name: str) -> bool:
         """Check if a worktree exists for a spec."""
@@ -444,19 +444,19 @@ class WorktreeManager:
 
     def _check_branch_namespace_conflict(self) -> str | None:
         """
-        Check if a branch named 'auto-claude' exists, which would block creating
-        branches in the 'auto-claude/*' namespace.
+        Check if a branch named 'feat' exists, which would block creating
+        branches in the 'feat/*' namespace.
 
         Git stores branch refs as files under .git/refs/heads/, so a branch named
-        'auto-claude' creates a file that prevents creating the 'auto-claude/'
-        directory needed for 'auto-claude/{spec-name}' branches.
+        'feat' creates a file that prevents creating the 'feat/'
+        directory needed for 'feat/{spec-name}' branches.
 
         Returns:
             The conflicting branch name if found, None otherwise.
         """
-        result = self._run_git(["rev-parse", "--verify", "auto-claude"])
+        result = self._run_git(["rev-parse", "--verify", "feat"])
         if result.returncode == 0:
-            return "auto-claude"
+            return "feat"
         return None
 
     def _branch_exists(self, branch_name: str) -> bool:
@@ -639,14 +639,14 @@ class WorktreeManager:
         # This cleans up any stale references that might block operations
         self._run_git(["worktree", "prune"])
 
-        # Step 2: Check for branch namespace conflict (e.g., 'auto-claude' blocking 'auto-claude/*')
+        # Step 2: Check for branch namespace conflict (e.g., 'feat' blocking 'feat/*')
         conflicting_branch = self._check_branch_namespace_conflict()
         if conflicting_branch:
             raise WorktreeError(
                 f"Branch '{conflicting_branch}' exists and blocks creating '{branch_name}'.\n"
                 f"\n"
-                f"Git branch names work like file paths - a branch named 'auto-claude' prevents\n"
-                f"creating branches under 'auto-claude/' (like 'auto-claude/{spec_name}').\n"
+                f"Git branch names work like file paths - a branch named 'feat' prevents\n"
+                f"creating branches under 'feat/' (like 'feat/{spec_name}').\n"
                 f"\n"
                 f"Fix: Rename the conflicting branch:\n"
                 f"  git branch -m {conflicting_branch} {conflicting_branch}-backup"
@@ -839,7 +839,7 @@ class WorktreeManager:
             # --no-commit stages the merge but doesn't create the commit
             merge_args.append("--no-commit")
         else:
-            merge_args.extend(["-m", f"auto-claude: Merge {info.branch}"])
+            merge_args.extend(["-m", f"feat: merge {info.branch}"])
 
         result = self._run_git(merge_args)
 
@@ -932,16 +932,24 @@ class WorktreeManager:
         return worktrees
 
     def list_all_spec_branches(self) -> list[str]:
-        """List all auto-claude branches (even if worktree removed)."""
-        result = self._run_git(["branch", "--list", "auto-claude/*"])
-        if result.returncode != 0:
-            return []
-
+        """List all task branches (feat/* and legacy auto-claude/*)."""
         branches = []
-        for line in result.stdout.strip().split("\n"):
-            branch = line.strip().lstrip("* ")
-            if branch:
-                branches.append(branch)
+
+        # Current prefix
+        result = self._run_git(["branch", "--list", "feat/*"])
+        if result.returncode == 0:
+            for line in result.stdout.strip().split("\n"):
+                branch = line.strip().lstrip("* ")
+                if branch:
+                    branches.append(branch)
+
+        # Legacy prefix for backward compatibility
+        result = self._run_git(["branch", "--list", "auto-claude/*"])
+        if result.returncode == 0:
+            for line in result.stdout.strip().split("\n"):
+                branch = line.strip().lstrip("* ")
+                if branch:
+                    branches.append(branch)
 
         return branches
 
@@ -1211,7 +1219,7 @@ class WorktreeManager:
             )
 
         target = target_branch or self.base_branch
-        pr_title = title or f"auto-claude: {spec_name}"
+        pr_title = title or f"feat: {spec_name}"
 
         # Try AI-powered PR body from project's PR template, fall back to spec summary
         pr_body: str | None = None
@@ -1381,7 +1389,7 @@ class WorktreeManager:
             )
 
         target = target_branch or self.base_branch
-        mr_title = title or f"auto-claude: {spec_name}"
+        mr_title = title or f"feat: {spec_name}"
 
         # Get MR body from spec.md if available
         mr_body = self._extract_spec_summary(spec_name)

@@ -803,7 +803,10 @@ export class AgentProcessManager {
           lastMessage = phaseUpdate.message;
         }
 
-        if (phaseChanged) {
+        if (phaseUpdate.progress !== undefined) {
+          // Use backend-provided progress (from emit_phase with progress= param)
+          phaseProgress = phaseUpdate.progress;
+        } else if (phaseChanged) {
           phaseProgress = 10;
         } else {
           phaseProgress = Math.min(90, phaseProgress + 5);

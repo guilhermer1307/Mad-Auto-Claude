@@ -140,10 +140,12 @@ from agents.tools_pkg import (
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from claude_agent_sdk.types import HookMatcher
 from core.auth import (
+
     configure_sdk_authentication,
     get_sdk_env_vars,
 )
 from linear_updater import is_linear_enabled
+from phase_config import is_claude_model
 from prompts_pkg.project_context import detect_project_capabilities, load_project_index
 from security import bash_security_hook
 
@@ -453,7 +455,7 @@ def create_client(
     betas: list[str] | None = None,
     effort_level: str | None = None,
     fast_mode: bool = False,
-) -> ClaudeSDKClient:
+) -> "ClaudeSDKClient | OpenAIClient":
     """
     Create a Claude Agent SDK client with multi-layered security.
 
@@ -502,6 +504,43 @@ def create_client(
        (see security.py for ALLOWED_COMMANDS)
     4. Tool filtering - Each agent type only sees relevant tools (prevents misuse)
     """
+    # --- Non-Claude model dispatch ---
+    # For non-Claude models (e.g., openai/gpt-5.3-codex, google/gemini-2.5-pro),
+    # use the OpenAI-compatible client via OpenRouter instead of the Claude SDK.
+    if not is_claude_model(model):
+        from core.openai_client import OpenAIClient
+
+        # Build system prompt (same as Claude client)
+        base_prompt = (
+            f"You are an expert full-stack developer building production-quality software. "
+            f"Your working directory is: {project_dir.resolve()}\n"
+            f"Your filesystem access is RESTRICTED to this directory only. "
+            f"Use relative paths (starting with ./) for all file operations. "
+            f"Never use absolute paths or try to access files outside your working directory.\n\n"
+            f"You follow existing code patterns, write clean maintainable code, and verify "
+            f"your work through thorough testing. You communicate progress through Git commits "
+            f"and build-progress.txt updates."
+        )
+
+        # Include CLAUDE.md if enabled
+        if should_use_claude_md():
+            claude_md_content = load_claude_md(project_dir)
+            if claude_md_content:
+                base_prompt += f"\n\n# Project Instructions (from CLAUDE.md)\n\n{claude_md_content}"
+
+        print(f"[OpenAI Client] Using non-Claude model: {model}")
+        print(f"   - Provider: OpenAI")
+        print(f"   - Project dir: {project_dir.resolve()}")
+        print(f"   - Tools: Read, Write, Edit, Bash, Glob, Grep (local execution)")
+        print()
+
+        return OpenAIClient(
+            model=model,
+            system_prompt=base_prompt,
+            project_dir=project_dir,
+        )
+
+    # --- Claude model path (existing behavior) ---
     # Collect env vars to pass to SDK (ANTHROPIC_BASE_URL, CLAUDE_CONFIG_DIR, etc.)
     sdk_env = get_sdk_env_vars()
 

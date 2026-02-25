@@ -431,6 +431,28 @@
     "taskCreated": "Task Created",
     "createTask": "Create Task"
   },
+  "chat": {
+    "closeSession": "Close session",
+    "confirmDiscard": "Are you sure you want to discard this worktree? This action cannot be undone.",
+    "selectWorktree": "Select Worktree",
+    "selectWorktreeDescription": "Choose a worktree to attach to this chat session, or start with the main project.",
+    "searchWorktrees": "Search worktrees...",
+    "attachImage": "Attach image",
+    "inputHint": "Press Enter to send, Shift+Enter for new line. Paste or attach images.",
+    "mainProject": "Main Project",
+    "mainProjectDescription": "Work on the main project branch",
+    "createNewWorktree": "Create New Worktree",
+    "createNewWorktreeDescription": "Create a new terminal worktree for this chat",
+    "branchName": "Branch Name",
+    "branchNamePlaceholder": "feature/my-feature",
+    "baseBranch": "Base Branch",
+    "selectBaseBranch": "Select base branch",
+    "creating": "Creating...",
+    "createWorktree": "Create Worktree",
+    "loadingWorktrees": "Loading worktrees...",
+    "noWorktreesMatch": "No worktrees match your search",
+    "noWorktreesAvailable": "No worktrees available"
+  },
   "ideation": {
     "converting": "Converting...",
     "convertToTask": "Convert to Auto-Build Task",

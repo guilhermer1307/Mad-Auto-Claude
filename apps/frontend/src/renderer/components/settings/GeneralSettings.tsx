@@ -2,16 +2,16 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { SettingsSection } from './SettingsSection';
 import { AgentProfileSettings } from './AgentProfileSettings';
 import {
-  AVAILABLE_MODELS,
   THINKING_LEVELS,
   DEFAULT_FEATURE_MODELS,
   DEFAULT_FEATURE_THINKING,
-  FEATURE_LABELS
+  FEATURE_LABELS,
+  getModelsGroupedByProvider
 } from '../../../shared/constants';
 import type {
   AppSettings,
@@ -203,10 +203,15 @@ export function GeneralSettings({ settings, onSettingsChange, section }: General
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {AVAILABLE_MODELS.map((m) => (
-                              <SelectItem key={m.value} value={m.value}>
-                                {m.label}
-                              </SelectItem>
+                            {getModelsGroupedByProvider().map((group) => (
+                              <SelectGroup key={group.provider}>
+                                <SelectLabel className="text-xs font-semibold text-muted-foreground">{group.label}</SelectLabel>
+                                {group.models.map((m) => (
+                                  <SelectItem key={m.value} value={m.value}>
+                                    {m.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
                             ))}
                           </SelectContent>
                         </Select>

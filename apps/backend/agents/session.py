@@ -9,6 +9,8 @@ memory updates, recovery tracking, and Linear integration.
 import logging
 from pathlib import Path
 
+from typing import TYPE_CHECKING
+
 from claude_agent_sdk import ClaudeSDKClient
 from core.error_utils import (
     is_authentication_error,
@@ -22,7 +24,9 @@ from linear_updater import (
     linear_subtask_completed,
     linear_subtask_failed,
 )
+from phase_event import ExecutionPhase, emit_phase
 from progress import (
+    count_subtasks,
     count_subtasks_detailed,
     is_build_complete,
 )
@@ -49,6 +53,12 @@ from .utils import (
     load_implementation_plan,
     sync_spec_to_source,
 )
+
+if TYPE_CHECKING:
+    from core.openai_client import OpenAIClient
+
+# Union type for both client implementations
+AgentClient = "ClaudeSDKClient | OpenAIClient"
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +160,17 @@ async def post_session_processing(
     if subtask_status == "completed":
         # Success! Record the attempt and good commit
         print_status(f"Subtask {subtask_id} completed successfully", "success")
+
+        # Emit updated progress to frontend
+        completed_count, total_count = count_subtasks(spec_dir)
+        if total_count > 0:
+            progress_pct = int((completed_count / total_count) * 100)
+            emit_phase(
+                ExecutionPhase.CODING,
+                f"Completed {subtask_id} ({completed_count}/{total_count})",
+                progress=progress_pct,
+                subtask=subtask_id,
+            )
 
         # Update status file
         if status_manager:
@@ -439,7 +460,7 @@ async def post_session_processing(
 
 
 async def run_agent_session(
-    client: ClaudeSDKClient,
+    client,  # ClaudeSDKClient | OpenAICompatibleClient
     message: str,
     spec_dir: Path,
     verbose: bool = False,
@@ -650,6 +671,12 @@ async def run_agent_session(
 
         print("\n" + "-" * 70 + "\n")
 
+        # Session stats for progress tracking
+        session_stats = {
+            "message_count": message_count,
+            "tool_count": tool_count,
+        }
+
         # Check if build is complete
         if is_build_complete(spec_dir):
             debug_success(
@@ -659,7 +686,7 @@ async def run_agent_session(
                 tool_count=tool_count,
                 response_length=len(response_text),
             )
-            return "complete", response_text, {}
+            return "complete", response_text, {"session_stats": session_stats}
 
         debug_success(
             "session",
@@ -668,7 +695,7 @@ async def run_agent_session(
             tool_count=tool_count,
             response_length=len(response_text),
         )
-        return "continue", response_text, {}
+        return "continue", response_text, {"session_stats": session_stats}
 
     except Exception as e:
         # Detect specific error types for better retry handling

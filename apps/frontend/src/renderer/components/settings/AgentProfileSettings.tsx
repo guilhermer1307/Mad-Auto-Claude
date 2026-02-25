@@ -9,7 +9,8 @@ import {
   DEFAULT_PHASE_MODELS,
   DEFAULT_PHASE_THINKING,
   ADAPTIVE_THINKING_MODELS,
-  PHASE_KEYS
+  PHASE_KEYS,
+  getModelsGroupedByProvider
 } from '../../../shared/constants';
 import { useSettingsStore, saveSettings } from '../../stores/settings-store';
 import { SettingsSection } from './SettingsSection';
@@ -18,7 +19,9 @@ import { Button } from '../ui/button';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue
 } from '../ui/select';
@@ -280,10 +283,15 @@ export function AgentProfileSettings() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {AVAILABLE_MODELS.map((m) => (
-                              <SelectItem key={m.value} value={m.value}>
-                                {m.label}
-                              </SelectItem>
+                            {getModelsGroupedByProvider().map((group) => (
+                              <SelectGroup key={group.provider}>
+                                <SelectLabel className="text-xs font-semibold text-muted-foreground">{group.label}</SelectLabel>
+                                {group.models.map((m) => (
+                                  <SelectItem key={m.value} value={m.value}>
+                                    {m.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
                             ))}
                           </SelectContent>
                         </Select>

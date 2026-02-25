@@ -26,6 +26,7 @@ import { registerGitlabHandlers } from './gitlab-handlers';
 import { registerIdeationHandlers } from './ideation-handlers';
 import { registerChangelogHandlers } from './changelog-handlers';
 import { registerInsightsHandlers } from './insights-handlers';
+import { registerChatHandlers } from './chat-handlers';
 import { registerMemoryHandlers } from './memory-handlers';
 import { registerAppUpdateHandlers } from './app-update-handlers';
 import { registerDebugHandlers } from './debug-handlers';
@@ -105,6 +106,9 @@ export function setupIpcHandlers(
   // Insights handlers
   registerInsightsHandlers(getMainWindow);
 
+  // Chat handlers (multi-worktree chat system)
+  registerChatHandlers();
+
   // Memory & infrastructure handlers (for Graphiti/LadybugDB)
   registerMemoryHandlers();
 
@@ -147,6 +151,7 @@ export {
   registerIdeationHandlers,
   registerChangelogHandlers,
   registerInsightsHandlers,
+  registerChatHandlers,
   registerMemoryHandlers,
   registerAppUpdateHandlers,
   registerDebugHandlers,

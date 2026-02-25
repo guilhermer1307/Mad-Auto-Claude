@@ -18,6 +18,7 @@ export class AgentEvents {
     phase: ExecutionProgressData['phase'];
     message?: string;
     currentSubtask?: string;
+    progress?: number;
     resetTimestamp?: number;
     profileId?: string;
   } | null {
@@ -29,6 +30,7 @@ export class AgentEvents {
         phase: ExecutionProgressData['phase'];
         message?: string;
         currentSubtask?: string;
+        progress?: number;
         resetTimestamp?: number;
         profileId?: string;
       } = {
@@ -36,6 +38,11 @@ export class AgentEvents {
         message: structuredEvent.message,
         currentSubtask: structuredEvent.subtask
       };
+
+      // Include progress from backend if available (e.g., subtask completion %)
+      if (structuredEvent.progress !== undefined) {
+        result.progress = structuredEvent.progress;
+      }
 
       // Include pause phase metadata if present
       if (structuredEvent.reset_timestamp !== undefined) {

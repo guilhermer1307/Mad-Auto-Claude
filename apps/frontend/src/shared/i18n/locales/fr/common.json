@@ -431,6 +431,28 @@
     "taskCreated": "Tâche créée",
     "createTask": "Créer une tâche"
   },
+  "chat": {
+    "closeSession": "Fermer la session",
+    "confirmDiscard": "Êtes-vous sûr de vouloir supprimer ce worktree ? Cette action ne peut pas être annulée.",
+    "selectWorktree": "Sélectionner un worktree",
+    "selectWorktreeDescription": "Choisissez un worktree à attacher à cette session de chat, ou commencez avec le projet principal.",
+    "searchWorktrees": "Rechercher des worktrees...",
+    "attachImage": "Joindre une image",
+    "inputHint": "Appuyez sur Entrée pour envoyer, Maj+Entrée pour nouvelle ligne. Collez ou joignez des images.",
+    "mainProject": "Projet principal",
+    "mainProjectDescription": "Travailler sur la branche principale du projet",
+    "createNewWorktree": "Créer un nouveau worktree",
+    "createNewWorktreeDescription": "Créer un nouveau worktree terminal pour ce chat",
+    "branchName": "Nom de la branche",
+    "branchNamePlaceholder": "feature/ma-fonctionnalite",
+    "baseBranch": "Branche de base",
+    "selectBaseBranch": "Sélectionner la branche de base",
+    "creating": "Création...",
+    "createWorktree": "Créer le worktree",
+    "loadingWorktrees": "Chargement des worktrees...",
+    "noWorktreesMatch": "Aucun worktree ne correspond à votre recherche",
+    "noWorktreesAvailable": "Aucun worktree disponible"
+  },
   "ideation": {
     "converting": "Conversion...",
     "convertToTask": "Convertir en tâche Auto-Build",

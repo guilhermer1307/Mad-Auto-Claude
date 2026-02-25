@@ -160,8 +160,8 @@ export interface ColorThemeDefinition {
 // Thinking level for Claude model (budget token allocation)
 export type ThinkingLevel = 'low' | 'medium' | 'high';
 
-// Model type shorthand
-export type ModelTypeShort = 'haiku' | 'sonnet' | 'opus' | 'opus-1m' | 'opus-4.5';
+// Model type shorthand — Claude shorthands + any provider/model string for non-Claude models
+export type ModelTypeShort = 'haiku' | 'sonnet' | 'opus' | 'opus-1m' | 'opus-4.5' | (string & {});
 
 // Phase-based model configuration for Auto profile
 // Each phase can use a different model optimized for that task type

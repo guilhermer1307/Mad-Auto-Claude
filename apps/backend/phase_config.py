@@ -111,6 +111,30 @@ class TaskMetadataConfig(TypedDict, total=False):
 Phase = Literal["spec", "planning", "coding", "qa"]
 
 
+def is_claude_model(model: str) -> bool:
+    """
+    Check if a model ID (shorthand or full) refers to a Claude model.
+
+    Returns True for Claude models that should use the Claude SDK client.
+    Returns False for non-Claude models that should use the OpenAI-compatible client.
+
+    Examples:
+        is_claude_model("opus") -> True
+        is_claude_model("claude-opus-4-6") -> True
+        is_claude_model("openai/gpt-5.3-codex") -> False
+        is_claude_model("google/gemini-2.5-pro") -> False
+    """
+    # Known Claude shorthands
+    if model in MODEL_ID_MAP:
+        return True
+    # Full Claude model IDs start with "claude-"
+    if model.startswith("claude-"):
+        return True
+    # Environment overrides for shorthands may resolve to non-Claude,
+    # but the shorthand itself indicates intent to use Claude
+    return False
+
+
 def resolve_model_id(model: str) -> str:
     """
     Resolve a model shorthand (haiku, sonnet, opus) to a full model ID.

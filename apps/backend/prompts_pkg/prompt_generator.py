@@ -323,7 +323,7 @@ Verify:""")
 5. **Commit your changes:**
    ```bash
    git add .
-   git commit -m "auto-claude: {subtask_id} - {description[:50]}"
+   git commit -m "feat: {subtask_id} - {description[:50]}"
    ```
 6. **Update the plan** - set this subtask's status to "completed" in implementation_plan.json
 
@@ -419,16 +419,21 @@ def load_subtask_context(
     spec_dir: Path,
     project_dir: Path,
     subtask: dict,
-    max_file_lines: int = 200,
+    max_pattern_lines: int = 80,
 ) -> dict:
     """
     Load minimal context needed for a subtask.
+
+    Token-efficient approach:
+    - Pattern files are pre-loaded (truncated) since the agent needs to study coding conventions
+    - Files to modify are NOT pre-loaded — the agent has Read/Edit tools and will read
+      what it needs. This avoids wasting tokens on large files that get truncated anyway.
 
     Args:
         spec_dir: Spec directory
         project_dir: Project root
         subtask: The subtask being implemented
-        max_file_lines: Maximum lines to include per file
+        max_pattern_lines: Maximum lines to include per pattern file
 
     Returns:
         Dict with file contents and relevant context
@@ -439,16 +444,17 @@ def load_subtask_context(
         "spec_excerpt": None,
     }
 
-    # Load pattern files (truncated)
+    # Load pattern files (truncated) — these are small reference files
+    # that show coding conventions, so pre-loading saves tool call round-trips
     for pattern_path in subtask.get("patterns_from", []):
         full_path = project_dir / pattern_path
         if full_path.exists():
             try:
                 lines = full_path.read_text(encoding="utf-8").split("\n")
-                if len(lines) > max_file_lines:
-                    content = "\n".join(lines[:max_file_lines])
+                if len(lines) > max_pattern_lines:
+                    content = "\n".join(lines[:max_pattern_lines])
                     content += (
-                        f"\n\n... (truncated, {len(lines) - max_file_lines} more lines)"
+                        f"\n\n... (truncated, {len(lines) - max_pattern_lines} more lines — use Read tool for full file)"
                     )
                 else:
                     content = "\n".join(lines)
@@ -456,22 +462,19 @@ def load_subtask_context(
             except Exception:
                 context["patterns"][pattern_path] = "(Could not read file)"
 
-    # Load files to modify (truncated)
+    # Files to modify — only include paths and line counts (NOT content)
+    # The agent has Read/Edit/Glob tools and will read what it needs.
+    # This saves significant tokens vs pre-loading 200 lines per file.
     for file_path in subtask.get("files_to_modify", []):
         full_path = project_dir / file_path
         if full_path.exists():
             try:
-                lines = full_path.read_text(encoding="utf-8").split("\n")
-                if len(lines) > max_file_lines:
-                    content = "\n".join(lines[:max_file_lines])
-                    content += (
-                        f"\n\n... (truncated, {len(lines) - max_file_lines} more lines)"
-                    )
-                else:
-                    content = "\n".join(lines)
-                context["files_to_modify"][file_path] = content
+                line_count = len(full_path.read_text(encoding="utf-8").split("\n"))
+                context["files_to_modify"][file_path] = f"({line_count} lines — use Read tool)"
             except Exception:
-                context["files_to_modify"][file_path] = "(Could not read file)"
+                context["files_to_modify"][file_path] = "(exists — use Read tool)"
+        else:
+            context["files_to_modify"][file_path] = "(file not found)"
 
     return context
 
@@ -494,8 +497,10 @@ def format_context_for_prompt(context: dict) -> str:
             sections.append(f"### `{path}`\n```\n{content}\n```\n")
 
     if context.get("files_to_modify"):
-        sections.append("## Current File Contents (To Modify)\n")
-        for path, content in context["files_to_modify"].items():
-            sections.append(f"### `{path}`\n```\n{content}\n```\n")
+        sections.append("## Files to Modify\n")
+        sections.append("Read these files with the Read tool before making changes:\n")
+        for path, info in context["files_to_modify"].items():
+            sections.append(f"- `{path}` {info}")
+        sections.append("")
 
     return "\n".join(sections)

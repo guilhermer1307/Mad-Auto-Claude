@@ -811,7 +811,7 @@ git add . ':!.auto-claude'
 # 2. Run git status to see what git sees
 # 3. Adjust your paths accordingly
 
-git commit -m "auto-claude: Complete [subtask-id] - [subtask description]
+git commit -m "feat: complete [subtask-id] - [subtask description]
 
 - Files modified: [list]
 - Verification: [type] - passed
@@ -881,7 +881,7 @@ All subtasks completed!
 Workflow type: [type]
 Total phases: [N]
 Total subtasks: [N]
-Branch: auto-claude/[feature-name]
+Branch: feat/[feature-name]
 
 Ready for human review and merge.
 ```

@@ -22,6 +22,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/button';
 import { Checkbox } from '../../ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
 import { cn } from '../../../lib/utils';
 import { MergeProgressOverlay } from './MergeProgressOverlay';
 import type { WorktreeStatus, MergeConflict, MergeStats, GitConflictInfo, SupportedIDE, SupportedTerminal, MergeProgress, MergeLogEntry, MergeLogEntryType } from '../../../../shared/types';
@@ -45,7 +48,7 @@ interface WorkspaceStatusProps {
   onShowConflictDialog: (show: boolean) => void;
   onLoadMergePreview: () => void;
   onStageOnlyChange: (value: boolean) => void;
-  onMerge: () => void;
+  onMerge: (targetBranch?: string) => void;
   onShowPRDialog?: (show: boolean) => void;
   onClose?: () => void;
   onSwitchToTerminals?: () => void;
@@ -114,6 +117,11 @@ export function WorkspaceStatus({
   const { settings } = useSettingsStore();
   const preferredIDE = settings.preferredIDE || 'vscode';
   const preferredTerminal = settings.preferredTerminal || 'system';
+
+  // Target branch selection state
+  const defaultBranch = worktreeStatus.currentProjectBranch || worktreeStatus.baseBranch || 'main';
+  const [targetBranch, setTargetBranch] = useState<string>(defaultBranch);
+  const [customBranch, setCustomBranch] = useState<string>('');
 
   // Merge progress state
   const [mergeProgress, setMergeProgress] = useState<MergeProgress | null>(null);
@@ -547,6 +555,57 @@ export function WorkspaceStatus({
 
       {/* Actions Footer */}
       <div className="px-4 py-3 bg-muted/20 border-t border-border space-y-3">
+        {/* Target Branch Selection */}
+        {worktreeStatus.exists && !isAlreadyMerged && !isSuperseded && (
+          <div className="space-y-1.5">
+            <Label htmlFor="target-branch" className="text-xs text-muted-foreground">
+              {t('taskReview:merge.targetBranch')}
+            </Label>
+            <div className="flex gap-2">
+              <Select
+                value={targetBranch === 'custom' ? 'custom' : targetBranch}
+                onValueChange={(value) => {
+                  setTargetBranch(value);
+                  if (value !== 'custom') {
+                    setCustomBranch('');
+                  }
+                }}
+                disabled={isMerging || isDiscarding}
+              >
+                <SelectTrigger id="target-branch" className="h-9">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {worktreeStatus.currentProjectBranch && (
+                    <SelectItem value={worktreeStatus.currentProjectBranch}>
+                      {worktreeStatus.currentProjectBranch} (current)
+                    </SelectItem>
+                  )}
+                  {worktreeStatus.baseBranch && worktreeStatus.baseBranch !== worktreeStatus.currentProjectBranch && (
+                    <SelectItem value={worktreeStatus.baseBranch}>
+                      {worktreeStatus.baseBranch} (base)
+                    </SelectItem>
+                  )}
+                  {!worktreeStatus.currentProjectBranch && !worktreeStatus.baseBranch && (
+                    <SelectItem value="main">main</SelectItem>
+                  )}
+                  <SelectItem value="custom">Custom branch...</SelectItem>
+                </SelectContent>
+              </Select>
+              {targetBranch === 'custom' && (
+                <Input
+                  type="text"
+                  placeholder="Enter branch name"
+                  value={customBranch}
+                  onChange={(e) => setCustomBranch(e.target.value)}
+                  disabled={isMerging || isDiscarding}
+                  className="h-9 flex-1"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Stage Only Option - only show after conflicts have been checked (not for already_merged/superseded) */}
         {mergePreview && !isAlreadyMerged && !isSuperseded && (
           <label className="inline-flex items-center gap-2.5 text-sm cursor-pointer select-none px-3 py-2 rounded-lg border border-border bg-background/50 hover:bg-background/80 transition-colors">
@@ -564,17 +623,31 @@ export function WorkspaceStatus({
 
         {/* Primary Actions */}
         <div className="flex gap-2">
-          {/* State 1: No merge preview yet - show "Check for Conflicts" */}
+          {/* State 1: No merge preview yet - show "Merge" button that auto-checks conflicts */}
           {!mergePreview && !isLoadingPreview && (
-            <Button
-              variant="default"
-              onClick={onLoadMergePreview}
-              disabled={isMerging || isDiscarding}
-              className="flex-1"
-            >
-              <GitMerge className="mr-2 h-4 w-4" />
-              Check for Conflicts
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="success"
+                  onClick={() => {
+                    // Auto-load preview then merge
+                    onLoadMergePreview();
+                  }}
+                  disabled={isMerging || isDiscarding}
+                  className="flex-1"
+                >
+                  <GitMerge className="mr-2 h-4 w-4" />
+                  {stageOnly
+                    ? t('taskReview:merge.buttons.stageTo', { branch: worktreeStatus.currentProjectBranch || worktreeStatus.baseBranch || 'main' })
+                    : t('taskReview:merge.buttons.mergeTo', { branch: worktreeStatus.currentProjectBranch || worktreeStatus.baseBranch || 'main' })}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs">
+                  {t('taskReview:merge.checkConflictsThenMerge')}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {/* State 2: Loading merge preview */}
@@ -595,7 +668,7 @@ export function WorkspaceStatus({
               <TooltipTrigger asChild>
                 <Button
                   variant="success"
-                  onClick={onMerge}
+                  onClick={() => onMerge(targetBranch === 'custom' ? customBranch : targetBranch)}
                   disabled={isMerging || isDiscarding}
                   className="flex-1"
                 >
@@ -668,7 +741,7 @@ export function WorkspaceStatus({
               <TooltipTrigger asChild>
                 <Button
                   variant={hasGitConflicts || isBranchBehind || hasPathMappedMerges ? "warning" : "success"}
-                  onClick={onMerge}
+                  onClick={() => onMerge(targetBranch === 'custom' ? customBranch : targetBranch)}
                   disabled={isMerging || isDiscarding}
                   className="flex-1"
                 >

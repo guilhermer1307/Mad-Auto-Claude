@@ -25,6 +25,8 @@
     "alreadyMergedTitle": "Modifications déjà dans votre branche",
     "alreadyMergedDescription": "Ces modifications semblent déjà exister dans votre branche actuelle. Vous pouvez marquer cette tâche comme terminée en toute sécurité.",
     "alreadyMergedTooltip": "Les modifications de la tâche sont déjà présentes dans votre branche. Marquer comme terminé nettoiera le worktree sans fusionner.",
+    "checkConflictsThenMerge": "Vérifie les conflits puis fusionne les modifications dans votre branche",
+    "targetBranch": "Branche cible",
     "matchingFiles": "Fichiers correspondants",
     "supersededTitle": "Modifications remplacées",
     "supersededDescription": "Votre branche actuelle a une version plus récente de ces modifications. Envisagez de supprimer cette tâche ou de voir la comparaison.",

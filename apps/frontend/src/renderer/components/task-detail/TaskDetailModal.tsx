@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useToast } from '../../hooks/use-toast';
@@ -34,7 +35,7 @@ import { cn } from '../../lib/utils';
 import { calculateProgress } from '../../lib/utils';
 import { stopTask, submitReview, recoverStuckTask, deleteTask, useTaskStore, startTaskOrQueue } from '../../stores/task-store';
 import { useProjectStore } from '../../stores/project-store';
-import { TASK_STATUS_LABELS } from '../../../shared/constants';
+import { TASK_STATUS_LABELS, EXECUTION_PHASE_LABELS, EXECUTION_PHASE_BADGE_COLORS } from '../../../shared/constants';
 import { TaskEditDialog } from '../TaskEditDialog';
 import { useTaskDetail } from './hooks/useTaskDetail';
 import { TaskMetadata } from './TaskMetadata';
@@ -86,6 +87,32 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
   const progressPercent = calculateProgress(task.subtasks);
   const completedSubtasks = task.subtasks.filter(s => s.status === 'completed').length;
   const totalSubtasks = task.subtasks.length;
+
+  // Elapsed time for running tasks
+  const [elapsedTime, setElapsedTime] = useState('');
+  useEffect(() => {
+    if (!state.isRunning) {
+      setElapsedTime('');
+      return;
+    }
+    const startTime = task.executionProgress?.startedAt
+      ? new Date(task.executionProgress.startedAt).getTime()
+      : Date.now();
+
+    const updateElapsed = () => {
+      const diff = Date.now() - startTime;
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      if (minutes > 0) {
+        setElapsedTime(`${minutes}m ${seconds}s`);
+      } else {
+        setElapsedTime(`${seconds}s`);
+      }
+    };
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [state.isRunning, task.executionProgress?.startedAt]);
 
   // Event Handlers
   const handleStartStop = async () => {
@@ -153,11 +180,14 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
     state.setIsDeleting(false);
   };
 
-  const handleMerge = async () => {
+  const handleMerge = async (targetBranch?: string) => {
     state.setIsMerging(true);
     state.setWorkspaceError(null);
     try {
-      const result = await window.electronAPI.mergeWorktree(task.id, { noCommit: state.stageOnly });
+      const result = await window.electronAPI.mergeWorktree(task.id, {
+        noCommit: state.stageOnly,
+        targetBranch
+      });
       if (result.success && result.data?.success) {
         if (state.stageOnly && result.data.staged) {
           state.setWorkspaceError(null);
@@ -456,6 +486,36 @@ function TaskDetailModalContent({ open, task, onOpenChange, onSwitchToTerminals,
                 <div className="mt-3 flex items-center gap-3">
                   <Progress value={progressPercent} className="h-1.5 flex-1" />
                   <span className="text-xs text-muted-foreground tabular-nums w-10 text-right">{progressPercent}%</span>
+                </div>
+              )}
+
+              {/* Execution phase indicator - show current activity when running */}
+              {state.isRunning && task.executionProgress?.phase && task.executionProgress.phase !== 'idle' && (
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge
+                    className={cn(
+                      'text-[10px] px-1.5 py-0 h-5 border',
+                      EXECUTION_PHASE_BADGE_COLORS[task.executionProgress.phase] || 'bg-muted/50 text-muted-foreground border-muted'
+                    )}
+                  >
+                    <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
+                    {EXECUTION_PHASE_LABELS[task.executionProgress.phase] || task.executionProgress.phase}
+                  </Badge>
+                  {task.executionProgress.message && (
+                    <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">
+                      {task.executionProgress.message}
+                    </span>
+                  )}
+                  {task.executionProgress.currentSubtask && !task.executionProgress.message?.includes(task.executionProgress.currentSubtask) && (
+                    <span className="text-xs text-muted-foreground/70 font-mono truncate">
+                      [{task.executionProgress.currentSubtask}]
+                    </span>
+                  )}
+                  {elapsedTime && (
+                    <span className="text-[10px] text-muted-foreground/60 tabular-nums shrink-0">
+                      {elapsedTime}
+                    </span>
+                  )}
                 </div>
               )}
 

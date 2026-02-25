@@ -866,12 +866,24 @@ async def run_autonomous_agent(
                     "warning",
                 )
 
-            # Show what we're working on
+            # Show what we're working on and emit progress to frontend
             print(f"Working on: {highlight(subtask_id)}")
             print(f"Description: {next_subtask.get('description', 'No description')}")
             if attempt_count > 0:
                 print_status(f"Previous attempts: {attempt_count}", "warning")
             print()
+
+            # Emit per-subtask progress for frontend task detail modal
+            completed_count, total_count = count_subtasks(spec_dir)
+            if total_count > 0:
+                progress_pct = int((completed_count / total_count) * 100)
+                description_short = next_subtask.get('description', '')[:60]
+                emit_phase(
+                    ExecutionPhase.CODING,
+                    f"{description_short}",
+                    progress=progress_pct,
+                    subtask=subtask_id,
+                )
 
         # Set subtask info in logger
         if task_logger and subtask_id:
@@ -1293,7 +1305,7 @@ async def run_autonomous_agent(
             bold(f"{icon(Icons.SUCCESS)} NEXT STEPS"),
             "",
             "All subtasks completed!",
-            "  1. Review the auto-claude/* branch",
+            "  1. Review the feat/* branch",
             "  2. Run manual tests",
             "  3. Merge to main",
         ]

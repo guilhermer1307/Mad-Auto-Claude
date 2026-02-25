@@ -13,11 +13,13 @@ import { Label } from './ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue
 } from './ui/select';
-import { AVAILABLE_MODELS, THINKING_LEVELS } from '../../shared/constants';
+import { THINKING_LEVELS, getModelsGroupedByProvider } from '../../shared/constants';
 import type { InsightsModelConfig } from '../../shared/types';
 import type { ModelType, ThinkingLevel } from '../../shared/types';
 
@@ -71,10 +73,15 @@ export function CustomModelModal({ currentConfig, onSave, onClose, open = true }
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_MODELS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
+                {getModelsGroupedByProvider().map((group) => (
+                  <SelectGroup key={group.provider}>
+                    <SelectLabel className="text-xs font-semibold text-muted-foreground">{group.label}</SelectLabel>
+                    {group.models.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>

@@ -9,6 +9,7 @@ about a codebase. It can also suggest tasks based on the conversation.
 import argparse
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -50,9 +51,97 @@ from debug import (
 from phase_config import get_thinking_budget, resolve_model_id, sanitize_thinking_level
 
 
-def load_project_context(project_dir: str) -> str:
+def load_worktree_context(worktree_path: Path, project_dir: Path) -> str:
+    """Load worktree-specific context for the AI."""
+    import subprocess
+    
+    context_parts = []
+    
+    try:
+        # Get current branch name
+        branch_result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else "unknown"
+        
+        # Get base branch (try to infer from worktree path or use develop/main)
+        base_branch = "develop"  # Default
+        worktree_name = worktree_path.name
+        
+        # Check if this is a task worktree
+        task_id = None
+        if "auto-claude" in str(worktree_path):
+            # Extract task ID from path like .auto-claude/worktrees/tasks/001-feature-name
+            parts = str(worktree_path).split(os.sep)
+            for part in parts:
+                if part.startswith(("00", "01", "02", "03", "04", "05", "06", "07", "08", "09")):
+                    task_id = part.split("-")[0]
+                    break
+        
+        # Get changed files relative to base branch
+        diff_result = subprocess.run(
+            ["git", "diff", "--name-status", f"{base_branch}...HEAD"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        
+        changed_files = []
+        if diff_result.returncode == 0 and diff_result.stdout.strip():
+            for line in diff_result.stdout.strip().split("\n")[:20]:  # Limit to 20 files
+                parts = line.split("\t", 1)
+                if len(parts) == 2:
+                    status, filepath = parts
+                    changed_files.append(f"  {status}\t{filepath}")
+        
+        # Get git status for uncommitted changes
+        status_result = subprocess.run(
+            ["git", "status", "--short"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        
+        uncommitted = []
+        if status_result.returncode == 0 and status_result.stdout.strip():
+            for line in status_result.stdout.strip().split("\n")[:10]:
+                uncommitted.append(f"  {line}")
+        
+        # Build context
+        context_parts.append(f"**Branch:** `{current_branch}`")
+        context_parts.append(f"**Base Branch:** `{base_branch}`")
+        context_parts.append(f"**Worktree Path:** `{worktree_path.relative_to(project_dir)}`")
+        
+        if task_id:
+            context_parts.append(f"**Task ID:** `{task_id}`")
+        
+        if changed_files:
+            context_parts.append(f"\n**Changed Files** (vs {base_branch}):\n" + "\n".join(changed_files))
+        
+        if uncommitted:
+            context_parts.append(f"\n**Uncommitted Changes:**\n" + "\n".join(uncommitted))
+        
+        return "## Worktree Context\n\n" + "\n".join(context_parts)
+        
+    except Exception as e:
+        debug_error("insights_runner", f"Failed to load worktree context: {e}")
+        return f"## Worktree Context\n\n**Worktree Path:** `{worktree_path}`\n(Context loading failed)"
+
+
+def load_project_context(project_dir: str, worktree_path: str | None = None) -> str:
     """Load project context for the AI."""
     context_parts = []
+    
+    # Add worktree context if provided
+    if worktree_path:
+        worktree_ctx = load_worktree_context(Path(worktree_path), Path(project_dir))
+        context_parts.append(worktree_ctx)
 
     # Load project index if available (from .auto-claude - the installed instance)
     index_path = Path(project_dir) / ".auto-claude" / "project_index.json"
@@ -111,29 +200,34 @@ def load_project_context(project_dir: str) -> str:
     )
 
 
-def build_system_prompt(project_dir: str) -> str:
+def build_system_prompt(project_dir: str, worktree_path: str | None = None) -> str:
     """Build the system prompt for the insights agent."""
-    context = load_project_context(project_dir)
+    context = load_project_context(project_dir, worktree_path)
 
-    return f"""You are an AI assistant helping developers understand and work with their codebase.
-You have access to the following project context:
+    return f"""You are an AI coding assistant with full access to the project codebase.
+You can read, write, edit files, and run shell commands — just like the Claude CLI.
+
+Project context:
 
 {context}
 
 Your capabilities:
-1. Answer questions about the codebase structure, patterns, and architecture
-2. Suggest improvements, features, or bug fixes based on the code
-3. Help plan implementation of new features
-4. Provide code examples and explanations
+1. Read, search, and explore the codebase (Read, Glob, Grep)
+2. Write new files and edit existing ones (Write, Edit)
+3. Run shell commands, tests, builds, and scripts (Bash)
+4. Look up documentation and search the web (WebFetch, WebSearch)
+5. Answer questions about architecture, patterns, and code
+6. Implement features, fix bugs, refactor code
+7. Help plan and review implementations
 
-When the user asks you to create a task, wants to turn the conversation into a task, or when you believe creating a task would be helpful, output a task suggestion in this exact format on a SINGLE LINE:
+When the user asks you to create an Auto-Build task, or when you believe creating one would be helpful, output a task suggestion in this exact format on a SINGLE LINE:
 __TASK_SUGGESTION__:{{"title": "Task title here", "description": "Detailed description of what the task involves", "metadata": {{"category": "feature", "complexity": "medium", "impact": "medium"}}}}
 
 Valid categories: feature, bug_fix, refactoring, documentation, security, performance, ui_ux, infrastructure, testing
 Valid complexity: trivial, small, medium, large, complex
 Valid impact: low, medium, high, critical
 
-Be conversational and helpful. Focus on providing actionable insights and clear explanations.
+Be conversational and helpful. When editing code, explain what you changed and why.
 Keep responses concise but informative."""
 
 
@@ -143,6 +237,7 @@ async def run_with_sdk(
     history: list,
     model: str = "sonnet",  # Shorthand - resolved via API Profile if configured
     thinking_level: str = "medium",
+    worktree_path: str | None = None,
 ) -> None:
     """Run the chat using Claude SDK with streaming."""
     if not SDK_AVAILABLE:
@@ -161,19 +256,54 @@ async def run_with_sdk(
     # Ensure SDK can find the token
     ensure_claude_code_oauth_token()
 
-    system_prompt = build_system_prompt(project_dir)
-    project_path = Path(project_dir).resolve()
+    system_prompt = build_system_prompt(project_dir, worktree_path)
+    
+    # Use worktree path as working directory if provided, otherwise project root
+    working_dir = Path(worktree_path).resolve() if worktree_path else Path(project_dir).resolve()
 
     # Build conversation context from history
+    # Handle both simple string content and multi-part content (with images)
     conversation_context = ""
     for msg in history[:-1]:  # Exclude the latest message
         role = "User" if msg.get("role") == "user" else "Assistant"
-        conversation_context += f"\n{role}: {msg['content']}\n"
+        content = msg.get("content", "")
+        if isinstance(content, list):
+            # Multi-part content (images + text) - extract text parts for context
+            text_parts = [block.get("text", "") for block in content if block.get("type") == "text"]
+            content = " ".join(text_parts)
+        conversation_context += f"\n{role}: {content}\n"
+
+    # Check if the latest message has image content
+    latest_msg = history[-1] if history else None
+    has_images = latest_msg and isinstance(latest_msg.get("content"), list)
 
     # Build the full prompt with conversation history
-    full_prompt = message
-    if conversation_context.strip():
-        full_prompt = f"""Previous conversation:
+    if has_images:
+        # For messages with images, we need to construct a multi-part prompt
+        # The SDK will receive the image blocks directly
+        image_blocks = [
+            block for block in latest_msg["content"]
+            if block.get("type") == "image"
+        ]
+        text_parts = [
+            block.get("text", "") for block in latest_msg["content"]
+            if block.get("type") == "text"
+        ]
+        text_content = " ".join(text_parts) or message
+
+        if conversation_context.strip():
+            full_prompt = f"""Previous conversation:
+{conversation_context}
+
+Current question: {text_content}
+
+[The user has also attached {len(image_blocks)} image(s) to this message. Please analyze them.]"""
+        else:
+            full_prompt = text_content
+    else:
+        full_prompt = message
+        if conversation_context.strip():
+            full_prompt = f"""Previous conversation:
 {conversation_context}
 
 Current question: {message}"""
@@ -193,9 +323,9 @@ Current question: {message}"""
         options_kwargs = {
             "model": resolve_model_id(model),  # Resolve via API Profile if configured
             "system_prompt": system_prompt,
-            "allowed_tools": ["Read", "Glob", "Grep"],
-            "max_turns": 30,  # Allow sufficient turns for codebase exploration
-            "cwd": str(project_path),
+            "allowed_tools": ["Read", "Glob", "Grep", "Write", "Edit", "Bash", "WebFetch", "WebSearch"],
+            "max_turns": 50,
+            "cwd": str(working_dir),
         }
 
         options_kwargs["max_thinking_tokens"] = max_thinking_tokens
@@ -205,8 +335,16 @@ Current question: {message}"""
 
         # Use async context manager pattern
         async with client:
-            # Send the query
-            await client.query(full_prompt)
+            # Send the query - include image blocks if present
+            if has_images and image_blocks:
+                # Build multi-part content for the query
+                query_content = []
+                for img_block in image_blocks:
+                    query_content.append(img_block)
+                query_content.append({"type": "text", "text": full_prompt})
+                await client.query(query_content)
+            else:
+                await client.query(full_prompt)
 
             # Stream the response
             response_text = ""
@@ -355,6 +493,10 @@ def main():
         default="medium",
         help="Thinking level for extended reasoning (low, medium, high)",
     )
+    parser.add_argument(
+        "--worktree-path",
+        help="Optional worktree path to provide branch-specific context (defaults to project root)",
+    )
     args = parser.parse_args()
 
     # Validate and sanitize thinking level (handles legacy values like 'ultrathink')
@@ -366,6 +508,7 @@ def main():
     user_message = args.message
     model = args.model
     thinking_level = args.thinking_level
+    worktree_path = args.worktree_path
 
     debug(
         "insights_runner",
@@ -374,6 +517,7 @@ def main():
         message_length=len(user_message),
         model=model,
         thinking_level=thinking_level,
+        worktree_path=worktree_path,
     )
 
     # Load history from file if provided, otherwise parse inline JSON
@@ -400,7 +544,7 @@ def main():
 
     # Run the async SDK function
     debug("insights_runner", "Running SDK query")
-    asyncio.run(run_with_sdk(project_dir, user_message, history, model, thinking_level))
+    asyncio.run(run_with_sdk(project_dir, user_message, history, model, thinking_level, worktree_path))
     debug_success("insights_runner", "Query completed")
 
 

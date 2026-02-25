@@ -9,13 +9,64 @@ import type { AgentProfile, PhaseModelConfig, FeatureModelConfig, FeatureThinkin
 // Available Models
 // ============================================
 
-export const AVAILABLE_MODELS = [
-  { value: 'opus', label: 'Claude Opus 4.6' },
-  { value: 'opus-1m', label: 'Claude Opus 4.6 (1M)' },
-  { value: 'opus-4.5', label: 'Claude Opus 4.5' },
-  { value: 'sonnet', label: 'Claude Sonnet 4.5' },
-  { value: 'haiku', label: 'Claude Haiku 4.5' }
-] as const;
+// Provider identifiers for model grouping
+export type ModelProvider = 'claude' | 'openai';
+
+export interface ModelOption {
+  value: string;
+  label: string;
+  provider: ModelProvider;
+}
+
+// Claude models (use Claude SDK via Claude Code CLI)
+export const CLAUDE_MODELS: ModelOption[] = [
+  { value: 'opus', label: 'Claude Opus 4.6', provider: 'claude' },
+  { value: 'opus-1m', label: 'Claude Opus 4.6 (1M)', provider: 'claude' },
+  { value: 'opus-4.5', label: 'Claude Opus 4.5', provider: 'claude' },
+  { value: 'sonnet', label: 'Claude Sonnet 4.5', provider: 'claude' },
+  { value: 'haiku', label: 'Claude Haiku 4.5', provider: 'claude' },
+];
+
+// OpenAI models (use OpenAI SDK directly with OPENAI_API_KEY)
+export const OPENAI_MODELS: ModelOption[] = [
+  { value: 'gpt-4.1', label: 'GPT-4.1', provider: 'openai' },
+  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', provider: 'openai' },
+  { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano', provider: 'openai' },
+  { value: 'o3', label: 'OpenAI o3', provider: 'openai' },
+  { value: 'o4-mini', label: 'OpenAI o4-mini', provider: 'openai' },
+  { value: 'codex-mini', label: 'Codex Mini', provider: 'openai' },
+];
+
+// All models combined (backward-compatible)
+export const AVAILABLE_MODELS: ModelOption[] = [
+  ...CLAUDE_MODELS,
+  ...OPENAI_MODELS,
+];
+
+// Provider display names for UI grouping
+export const PROVIDER_LABELS: Record<ModelProvider, string> = {
+  claude: 'Anthropic (Claude)',
+  openai: 'OpenAI',
+};
+
+/** Check if a model ID refers to a Claude model (uses Claude SDK) */
+export function isClaudeModel(model: string): boolean {
+  if (model in MODEL_ID_MAP) return true;
+  if (model.startsWith('claude-')) return true;
+  return false;
+}
+
+/** Get models grouped by provider, ordered by PROVIDER_LABELS keys */
+export function getModelsGroupedByProvider(): { provider: ModelProvider; label: string; models: ModelOption[] }[] {
+  const groups: Record<string, ModelOption[]> = {};
+  for (const model of AVAILABLE_MODELS) {
+    if (!groups[model.provider]) groups[model.provider] = [];
+    groups[model.provider].push(model);
+  }
+  return (Object.keys(PROVIDER_LABELS) as ModelProvider[])
+    .filter(p => groups[p]?.length)
+    .map(p => ({ provider: p, label: PROVIDER_LABELS[p], models: groups[p] }));
+}
 
 // Maps model shorthand to actual Claude model IDs
 // Values must match apps/backend/phase_config.py MODEL_ID_MAP

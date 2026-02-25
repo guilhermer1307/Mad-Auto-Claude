@@ -787,7 +787,7 @@ export function GitHubSetupModal({
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   All tasks will be created from branches like{' '}
-                  <code className="px-1 bg-muted rounded">auto-claude/task-name</code>
+                  <code className="px-1 bg-muted rounded">feat/task-name</code>
                   {selectedBranch && (
                     <> based on <code className="px-1 bg-muted rounded">{selectedBranch}</code></>
                   )}

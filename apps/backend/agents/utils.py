@@ -82,7 +82,7 @@ def sync_spec_to_source(spec_dir: Path, source_spec_dir: Path | None) -> bool:
 
     IMPORTANT: Since .auto-claude/ is gitignored, this sync happens to the
     local filesystem regardless of what branch the user is on. The worktree
-    may be on a different branch (e.g., auto-claude/093-task), but the sync
+    may be on a different branch (e.g., feat/093-task), but the sync
     target is always the main project's .auto-claude/specs/ directory.
 
     Files synced (all files in spec directory):

@@ -311,6 +311,53 @@ def handle_build_command(
                 print("\n\nQA validation paused.")
                 print(f"Resume: python auto-claude/run.py --spec {spec_dir.name} --qa")
                 qa_approved = False
+        elif skip_qa:
+            # QA was skipped - mark as approved and update plan status
+            print("\n" + "=" * 70)
+            print("  QA VALIDATION SKIPPED")
+            print("=" * 70)
+            print("\nQA validation was skipped per task configuration.")
+            print("Moving directly to human review.\n")
+
+            # Write qa_signoff to implementation plan to trigger status update
+            plan_path = spec_dir / "implementation_plan.json"
+            if plan_path.exists():
+                from datetime import datetime
+                from implementation_plan.plan import ImplementationPlan
+
+                # Load plan using proper class
+                plan = ImplementationPlan.load(plan_path)
+
+                # Add qa_signoff with approved status (skipped means auto-approved)
+                plan.qa_signoff = {
+                    "status": "approved",
+                    "reason": "QA validation skipped by user configuration (skipQA=true)",
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }
+
+                # Update status based on completion state
+                plan.update_status_from_subtasks()
+
+                # Save updated plan
+                plan.save(plan_path)
+
+                debug_info("run.py", "QA signoff written (skipped) and status updated to human_review")
+
+                # Emit events for frontend state machine transition
+                from phase_event import ExecutionPhase, emit_phase
+                from core.task_event import TaskEventEmitter
+
+                emit_phase(ExecutionPhase.COMPLETE, "QA validation skipped - build complete")
+
+                task_event_emitter = TaskEventEmitter.from_spec_dir(spec_dir)
+                task_event_emitter.emit("QA_PASSED", {
+                    "iteration": 1,
+                    "testsRun": {"skipped": True}
+                })
+
+                # Sync to main project if in worktree
+                if sync_spec_to_source(spec_dir, source_spec_dir):
+                    debug_info("run.py", "Implementation plan synced to main project after skip QA")
 
         # Post-build finalization (only for isolated sequential mode)
         # This happens AFTER QA validation so the worktree still exists

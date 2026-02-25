@@ -85,8 +85,8 @@ function getWorktreeBranch(worktreePath: string, specId: string, timeout: number
     return explicitBranchName;
   }
 
-  // Fall back to the naming convention: auto-claude/{spec-id}
-  return `auto-claude/${specId}`;
+  // Fall back to the naming convention: feat/{spec-id}
+  return `feat/${specId}`;
 }
 
 /**

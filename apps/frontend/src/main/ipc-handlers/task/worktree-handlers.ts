@@ -32,8 +32,8 @@ export const GIT_BRANCH_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*[a-zA-Z0-9]$|^[a-zA
 /**
  * Validates a detected branch name and returns the safe branch to delete.
  *
- * Why `auto-claude/` prefix is considered safe:
- * - All task worktrees use branches named `auto-claude/{specId}`
+ * Why `feat/` prefix (and legacy `auto-claude/`) is considered safe:
+ * - All task worktrees use branches named `feat/{specId}` (or legacy `auto-claude/{specId}`)
  * - This pattern is controlled by Auto-Claude, not user input
  * - If detected branch matches this pattern, it's a valid task branch
  * - If it doesn't match (e.g., `main`, `develop`, `feature/xxx`), it's likely
@@ -65,9 +65,12 @@ export function validateWorktreeBranch(
     };
   }
 
-  // Matches auto-claude pattern with valid specId (not just "auto-claude/")
+  // Matches task branch pattern with valid specId (feat/ or legacy auto-claude/)
   // The specId must be non-empty for this to be a valid task branch
-  if (detectedBranch.startsWith('auto-claude/') && detectedBranch.length > 'auto-claude/'.length) {
+  const isTaskBranch =
+    (detectedBranch.startsWith('feat/') && detectedBranch.length > 'feat/'.length) ||
+    (detectedBranch.startsWith('auto-claude/') && detectedBranch.length > 'auto-claude/'.length);
+  if (isTaskBranch) {
     return {
       branchToDelete: detectedBranch,
       usedFallback: false,
@@ -2237,7 +2240,7 @@ export function registerWorktreeHandlers(
 
                     if (!hasActualStagedChanges) {
                       // Check if worktree branch was already merged (merge commit exists)
-                      const specBranch = `auto-claude/${task.specId}`;
+                      const specBranch = `feat/${task.specId}`;
                       try {
                         // Check if current branch contains all commits from spec branch
                         // git merge-base --is-ancestor returns exit code 0 if true, 1 if false
