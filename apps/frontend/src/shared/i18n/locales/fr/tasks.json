@@ -366,5 +366,34 @@
   "referenceImages": {
     "title": "Images de référence (facultatif)",
     "description": "Ajoutez des références visuelles comme des captures d'écran ou des conceptions pour aider l'IA à comprendre vos exigences."
+  },
+  "moduleImport": {
+    "title": "Importer un module",
+    "description": "Importer un dossier de module depuis un projet de compétences externe dans ce projet.",
+    "selectFolder": "Sélectionner le dossier du module",
+    "browsePlaceholder": "Choisissez un dossier de module contenant reviewed-to-be.md et tasks/",
+    "browse": "Parcourir",
+    "validating": "Validation de la structure du module...",
+    "preview": {
+      "title": "Aperçu du module",
+      "moduleName": "Module",
+      "taskCount": "{{count}} tâches réparties en {{phases}} phases",
+      "phase": "Phase {{number}}",
+      "tasks": "{{count}} tâches",
+      "dependsOn": "dépend de la Phase {{phases}}"
+    },
+    "importing": "Importation du module...",
+    "import": "Importer",
+    "complete": {
+      "title": "Importation terminée",
+      "message": "{{count}} tâches importées avec succès en tant que spec {{specId}}",
+      "viewOnBoard": "Voir sur le tableau",
+      "startBuilding": "Commencer la construction"
+    },
+    "errors": {
+      "invalidFolder": "Le dossier sélectionné n'est pas un module valide. Il doit contenir reviewed-to-be.md et un répertoire tasks/.",
+      "importFailed": "L'importation du module a échoué : {{error}}",
+      "noProject": "Aucun projet sélectionné"
+    }
   }
 }

@@ -139,6 +139,7 @@ import type {
   GitLabNewCommitsCheck
 } from './integrations';
 import type { APIProfile, ProfilesFile, TestConnectionResult, DiscoverModelsResult } from './profile';
+import type { ModuleValidationResult, ModuleImportResult } from './module-import';
 
 // ============================================
 // Branch Types
@@ -728,6 +729,10 @@ export interface ElectronAPI {
   getSourceEnv: () => Promise<IPCResult<SourceEnvConfig>>;
   updateSourceEnv: (config: { claudeOAuthToken?: string }) => Promise<IPCResult>;
   checkSourceToken: () => Promise<IPCResult<SourceEnvCheckResult>>;
+
+  // Module import operations
+  validateModuleFolder: (modulePath: string) => Promise<IPCResult<ModuleValidationResult>>;
+  importModule: (projectId: string, modulePath: string) => Promise<IPCResult<ModuleImportResult>>;
 
   // Changelog operations
   getChangelogDoneTasks: (projectId: string, tasks?: Task[]) => Promise<IPCResult<ChangelogTask[]>>;

@@ -12,6 +12,8 @@ This approach:
 - Moves bookkeeping to Python orchestration
 """
 
+from __future__ import annotations
+
 import json
 import re
 from pathlib import Path
@@ -186,6 +188,130 @@ coder prompt for detailed examples.
     return "".join(sections)
 
 
+def _load_imported_task_context(spec_dir: Path, subtask: dict) -> str:
+    """
+    Load full task specification and related tasks for imported modules.
+
+    If the spec was imported from an external skills project (has tasks/ dir),
+    loads the current task's full content and summaries of related tasks.
+    This ensures the coder agent has all cross-task requirements and logic.
+
+    Args:
+        spec_dir: Spec directory (may contain tasks/ and task_context.json)
+        subtask: The current subtask dict
+
+    Returns:
+        Markdown string with task context, or empty string if not an imported spec
+    """
+    tasks_dir = spec_dir / "tasks"
+    context_file = spec_dir / "task_context.json"
+
+    if not tasks_dir.is_dir() or not context_file.exists():
+        return ""
+
+    try:
+        with open(context_file, encoding="utf-8") as f:
+            task_context = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return ""
+
+    subtask_id = subtask.get("id", "")
+    subtask_map = task_context.get("subtask_map", {})
+    related_tasks_map = task_context.get("related_tasks", {})
+
+    # Get current task info
+    task_info = subtask_map.get(subtask_id)
+    if not task_info:
+        return ""
+
+    sections = []
+
+    # Load full content of the current task file
+    task_file = tasks_dir / task_info.get("task_file", "")
+    if task_file.exists():
+        content = task_file.read_text(encoding="utf-8")
+        sections.append("## DETAILED TASK SPECIFICATION\n")
+        sections.append(
+            "Read this carefully — it contains acceptance criteria, "
+            "step-by-step execution, business rules, and error scenarios "
+            "that you MUST follow.\n"
+        )
+        sections.append(content)
+        sections.append("")
+
+    # Load summaries of related tasks
+    related_numbers = related_tasks_map.get(subtask_id, [])
+    if related_numbers:
+        # Build number → task_file mapping
+        number_to_file: dict[int, str] = {}
+        for sid, info in subtask_map.items():
+            number_to_file[info.get("task_number", 0)] = info.get("task_file", "")
+
+        related_sections = []
+        for num in related_numbers:
+            rel_file = tasks_dir / number_to_file.get(num, "")
+            if not rel_file.exists():
+                continue
+            rel_content = rel_file.read_text(encoding="utf-8")
+
+            # Extract just the title, objective, and acceptance criteria
+            import re as _re
+
+            title_match = _re.search(r"^#\s+(.+)$", rel_content, _re.MULTILINE)
+            title = title_match.group(1).strip() if title_match else rel_file.stem
+
+            obj_match = _re.search(
+                r"^##\s+Objective\s*\n(.*?)(?=^##\s|\Z)",
+                rel_content,
+                _re.MULTILINE | _re.DOTALL,
+            )
+            objective = obj_match.group(1).strip()[:200] if obj_match else ""
+
+            criteria_match = _re.search(
+                r"^##\s+Acceptance Criteria.*?\n(.*?)(?=^##\s|\Z)",
+                rel_content,
+                _re.MULTILINE | _re.DOTALL,
+            )
+            criteria = ""
+            if criteria_match:
+                criteria_lines = [
+                    line.strip()
+                    for line in criteria_match.group(1).strip().splitlines()
+                    if line.strip().startswith("- [")
+                ]
+                criteria = "\n".join(criteria_lines[:5])
+
+            related_sections.append(
+                f"### Task {num:03d}: {title}\n"
+                f"**Objective:** {objective}\n"
+            )
+            if criteria:
+                related_sections.append(f"**Key criteria:**\n{criteria}\n")
+
+        if related_sections:
+            sections.append("## RELATED TASKS CONTEXT\n")
+            sections.append(
+                "These tasks share dependencies, files, or business rules "
+                "with your current task. Their requirements may affect your "
+                "implementation.\n"
+            )
+            sections.extend(related_sections)
+
+    # Load reference to reviewed-to-be.md if it exists
+    reviewed = spec_dir / "reference" / "reviewed-to-be.md"
+    if reviewed.exists():
+        sections.append(
+            "## ARCHITECTURE REFERENCE\n"
+            "The full target architecture specification is at "
+            "`reference/reviewed-to-be.md`. Read the relevant sections "
+            "referenced by your task specification.\n"
+        )
+
+    if sections:
+        return "\n".join(sections)
+    return ""
+
+
 def generate_subtask_prompt(
     spec_dir: Path,
     project_dir: Path,
@@ -236,6 +362,11 @@ def generate_subtask_prompt(
 
 {description}
 """)
+
+    # Inject imported task context (full task spec + related tasks)
+    imported_context = _load_imported_task_context(spec_dir, subtask)
+    if imported_context:
+        sections.append(imported_context)
 
     # Recovery context if this is a retry
     if attempt_count > 0:
@@ -349,6 +480,98 @@ Before marking complete, verify:
     return "\n".join(sections)
 
 
+def _load_planning_inputs(spec_dir: Path) -> str:
+    """
+    Load coding patterns and requirements as prompt sections for the planner.
+
+    Injects structured context so the planner can:
+    - Follow existing coding patterns (from coding_patterns.json or user-provided)
+    - Map all requirements to subtasks (from requirements.json + additional_requirements.json)
+
+    Args:
+        spec_dir: Path to the spec directory
+
+    Returns:
+        Markdown string with planning inputs to append to the prompt
+    """
+    sections = []
+
+    # Load coding patterns (if user-provided or from a previous run)
+    patterns_file = spec_dir / "coding_patterns.json"
+    if patterns_file.exists():
+        try:
+            with open(patterns_file, encoding="utf-8") as f:
+                patterns = json.load(f)
+            sections.append("## PRE-EXISTING CODING PATTERNS\n")
+            sections.append(
+                "The following coding patterns have been identified for this project. "
+                "You MUST follow these patterns and enrich them with any additional "
+                "patterns you discover during investigation.\n"
+            )
+            sections.append(f"```json\n{json.dumps(patterns, indent=2)}\n```\n")
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # Load requirements
+    requirements_file = spec_dir / "requirements.json"
+    if requirements_file.exists():
+        try:
+            with open(requirements_file, encoding="utf-8") as f:
+                requirements = json.load(f)
+            sections.append("## REQUIREMENTS TO COVER\n")
+            sections.append(
+                "These requirements MUST be mapped to subtasks in the "
+                "`requirements_coverage` section of your implementation plan.\n"
+            )
+
+            # Extract user requirements
+            user_reqs = requirements.get("user_requirements", [])
+            if user_reqs:
+                sections.append("**User Requirements:**")
+                for req in user_reqs:
+                    sections.append(f"- {req}")
+                sections.append("")
+
+            # Extract acceptance criteria
+            criteria = requirements.get("acceptance_criteria", [])
+            if criteria:
+                sections.append("**Acceptance Criteria:**")
+                for criterion in criteria:
+                    sections.append(f"- {criterion}")
+                sections.append("")
+
+            # Extract task description as a requirement if no explicit requirements
+            if not user_reqs and not criteria:
+                task_desc = requirements.get("task_description", "")
+                if task_desc:
+                    sections.append(f"**Task Description:** {task_desc}\n")
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # Load additional requirements (new inputs)
+    additional_file = spec_dir / "additional_requirements.json"
+    if additional_file.exists():
+        try:
+            with open(additional_file, encoding="utf-8") as f:
+                additional = json.load(f)
+            additional_reqs = additional.get("requirements", [])
+            if additional_reqs:
+                sections.append("## ADDITIONAL REQUIREMENTS (New Inputs)\n")
+                sections.append(
+                    "These additional requirements were added after the initial spec. "
+                    "They MUST also be mapped to subtasks in `requirements_coverage`.\n"
+                )
+                for req in additional_reqs:
+                    sections.append(f"- {req}")
+                sections.append("")
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    if sections:
+        return "\n".join(sections) + "\n---\n\n"
+    return ""
+
+
 def generate_planner_prompt(spec_dir: Path, project_dir: Path | None = None) -> str:
     """
     Generate the planner prompt (used only once at start).
@@ -400,6 +623,7 @@ Your spec file is located at: `{relative_spec}/spec.md`
 
 Store all build artifacts in this spec directory:
 - `{relative_spec}/implementation_plan.json` - Subtask-based implementation plan
+- `{relative_spec}/coding_patterns.json` - Structured coding patterns
 - `{relative_spec}/build-progress.txt` - Progress notes
 - `{relative_spec}/init.sh` - Environment setup script
 
@@ -412,7 +636,10 @@ not in the spec directory.
     # Note: Linear task creation and updates are now handled by Python orchestrator
     # via linear_updater.py - agents no longer need Linear instructions in prompts
 
-    return header + prompt
+    # Load and inject planning inputs (coding patterns, requirements)
+    planning_inputs = _load_planning_inputs(spec_dir)
+
+    return header + planning_inputs + prompt
 
 
 def load_subtask_context(

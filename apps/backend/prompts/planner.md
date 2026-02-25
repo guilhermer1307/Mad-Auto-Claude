@@ -69,6 +69,56 @@ Before creating the implementation plan, explicitly document:
 
 ---
 
+## PHASE 0.5: EXTRACT CODING PATTERNS (MANDATORY)
+
+Based on your Phase 0 investigation, you MUST create a structured `coding_patterns.json` file in the spec directory using the Write tool.
+
+This file captures the coding patterns and conventions you discovered, so they can be:
+- Passed to the coder agent for consistent implementation
+- Reviewed by the user before coding starts
+- Reused across tasks in the same project
+
+**If a `coding_patterns.json` already exists** (user-provided or from a previous run), READ it first. Your job is to **enrich** it with any additional patterns you discovered, not replace it.
+
+### Create/Update coding_patterns.json
+
+```json
+{
+  "patterns": [
+    {
+      "name": "Pattern name (e.g., 'Service class pattern')",
+      "description": "How this pattern works (e.g., 'All services inherit from BaseService')",
+      "example_files": ["path/to/example.py"],
+      "category": "architecture"
+    }
+  ],
+  "conventions": {
+    "naming": "Naming conventions observed (e.g., snake_case for Python)",
+    "error_handling": "How errors are handled (e.g., custom exceptions)",
+    "testing": "Testing approach (e.g., pytest with fixtures)",
+    "imports": "Import style (e.g., absolute imports, grouped)"
+  },
+  "extracted_at": "current ISO timestamp",
+  "source": "auto"
+}
+```
+
+### Valid Categories for Patterns
+
+| Category | Examples |
+|----------|----------|
+| `architecture` | Service patterns, dependency injection, module structure |
+| `naming` | Variable naming, file naming, class naming conventions |
+| `error_handling` | Exception types, error propagation, logging patterns |
+| `testing` | Test structure, fixtures, mocking approach |
+| `api` | Endpoint patterns, request/response format, middleware |
+| `styling` | CSS patterns, component patterns, theme usage |
+| `other` | Any other pattern that doesn't fit above |
+
+**IMPORTANT**: Include at least 2-3 patterns based on your investigation. The coder agent will use these to maintain consistency.
+
+---
+
 ## PHASE 1: READ AND CREATE CONTEXT FILES
 
 ### 1.1: Read the Project Specification
@@ -414,6 +464,62 @@ Use ONLY these values for the `type` field in phases:
 
 ---
 
+## PHASE 3.1: MAP REQUIREMENTS TO SUBTASKS (MANDATORY)
+
+After creating the implementation plan, you MUST verify that every requirement is covered by at least one subtask.
+
+### Step 1: Gather All Requirements
+
+Read ALL of these sources:
+
+1. **requirements.json** — Primary requirements (task_description, user_requirements, acceptance_criteria)
+2. **additional_requirements.json** — Extra requirements added by the user (if this file exists)
+3. **spec.md** — Success Criteria section
+
+Extract every distinct requirement and acceptance criterion.
+
+### Step 2: Map Requirements to Subtasks
+
+For each requirement, identify which subtask(s) in your plan address it.
+
+### Step 3: Add requirements_coverage to implementation_plan.json
+
+Include this section in your implementation plan:
+
+```json
+{
+  "requirements_coverage": {
+    "requirements": [
+      {
+        "requirement": "The exact requirement text",
+        "source": "requirements.json|additional_requirements.json|spec.md",
+        "covered_by_subtasks": ["subtask-1-1", "subtask-2-3"],
+        "status": "covered"
+      },
+      {
+        "requirement": "Another requirement",
+        "source": "additional_requirements.json",
+        "covered_by_subtasks": ["subtask-1-2"],
+        "status": "covered"
+      }
+    ],
+    "coverage_percentage": 100,
+    "verified_at": "current ISO timestamp"
+  }
+}
+```
+
+### Rules:
+- **Every requirement MUST be mapped** to at least one subtask
+- If a requirement has `"covered_by_subtasks": []`, its status must be `"uncovered"`
+- `coverage_percentage` = (covered requirements / total requirements) * 100
+- **Target: 100% coverage** — if you can't cover a requirement, add a subtask for it
+- Subtask IDs in `covered_by_subtasks` must match actual subtask IDs in your plan
+
+**If coverage is below 100%, go back and add missing subtasks before proceeding.**
+
+---
+
 ## PHASE 3.5: DEFINE VERIFICATION STRATEGY
 
 After creating the phases and subtasks, define the verification strategy based on the task's complexity assessment.
@@ -648,11 +754,13 @@ Include parallelism analysis, verification strategy, and QA configuration in the
 **🚨 END OF PHASE 4 CHECKPOINT 🚨**
 
 Before proceeding to PHASE 5, verify you have:
-1. ✅ Created the complete implementation_plan.json structure
-2. ✅ Used the Write tool to save it (not just described it)
-3. ✅ Added the summary section with parallelism analysis
-4. ✅ Added the verification_strategy section
-5. ✅ Added the qa_acceptance section
+1. ✅ Created coding_patterns.json with discovered patterns (Phase 0.5)
+2. ✅ Created the complete implementation_plan.json structure
+3. ✅ Used the Write tool to save it (not just described it)
+4. ✅ Added the requirements_coverage section (Phase 3.1) with 100% coverage
+5. ✅ Added the summary section with parallelism analysis
+6. ✅ Added the verification_strategy section
+7. ✅ Added the qa_acceptance section
 
 If you have NOT used the Write tool yet, STOP and do it now!
 
@@ -814,10 +922,11 @@ Example:
 **IMPORTANT: Your job is PLANNING ONLY - do NOT implement any code!**
 
 Your session ends after:
-1. **Creating implementation_plan.json** - the complete subtask-based plan
-2. **Creating/updating context files** - project_index.json, context.json
-3. **Creating init.sh** - the setup script
-4. **Creating build-progress.txt** - progress tracking document
+1. **Creating coding_patterns.json** - structured coding patterns from investigation
+2. **Creating implementation_plan.json** - the complete subtask-based plan (with requirements_coverage)
+3. **Creating/updating context files** - project_index.json, context.json
+4. **Creating init.sh** - the setup script
+5. **Creating build-progress.txt** - progress tracking document
 
 Note: These files are NOT committed to git - they are gitignored and managed locally.
 
@@ -880,7 +989,8 @@ Before creating implementation_plan.json, verify you have completed these steps:
 - [ ] spec.md exists and has been read
 - [ ] project_index.json exists (created if missing)
 - [ ] context.json exists (created if missing)
-- [ ] patterns documented from investigation are in context.json
+- [ ] coding_patterns.json created with discovered patterns (Phase 0.5)
+- [ ] requirements.json read (and additional_requirements.json if it exists)
 
 ### Understanding Checklist
 - [ ] I know which files will be modified and why
@@ -903,9 +1013,11 @@ If you skipped investigation, your plan will:
 **Your scope: PLANNING ONLY. Do NOT implement any code.**
 
 1. First, complete PHASE 0 (Deep Codebase Investigation)
-2. Then, read/create the context files in PHASE 1
-3. Create implementation_plan.json based on your findings
-4. Create init.sh and build-progress.txt
-5. Commit planning files and **STOP**
+2. Extract coding patterns into coding_patterns.json (PHASE 0.5)
+3. Read/create the context files in PHASE 1
+4. Create implementation_plan.json based on your findings (PHASE 3)
+5. Map ALL requirements to subtasks in requirements_coverage (PHASE 3.1)
+6. Create init.sh and build-progress.txt
+7. **STOP** — do NOT implement any code
 
 The coder agent will handle implementation in a separate session.

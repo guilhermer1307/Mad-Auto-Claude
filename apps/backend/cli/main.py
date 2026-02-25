@@ -261,6 +261,15 @@ Environment Variables:
         help="Base branch for creating worktrees (default: auto-detect or current branch)",
     )
 
+    # Import external modules
+    parser.add_argument(
+        "--import-module",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Import a module folder from external skills project into Auto Claude specs",
+    )
+
     # Batch task management
     parser.add_argument(
         "--batch-create",
@@ -346,6 +355,13 @@ def _run_cli() -> None:
     # Handle --cleanup-worktrees command
     if args.cleanup_worktrees:
         handle_cleanup_worktrees_command(project_dir)
+        return
+
+    # Handle import commands
+    if args.import_module:
+        from .import_commands import handle_import_module_command
+
+        handle_import_module_command(args.import_module, project_dir)
         return
 
     # Handle batch commands

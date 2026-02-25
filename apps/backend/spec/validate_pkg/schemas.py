@@ -20,6 +20,9 @@ IMPLEMENTATION_PLAN_SCHEMA = {
         "description",
         "workflow_rationale",
         "status",
+        "requirements_coverage",
+        "coding_patterns_applied",
+        "verification_strategy",
     ],
     "workflow_types": [
         "feature",

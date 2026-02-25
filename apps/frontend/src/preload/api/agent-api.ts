@@ -20,6 +20,7 @@ import { createLinearAPI, LinearAPI } from './modules/linear-api';
 import { createGitHubAPI, GitHubAPI } from './modules/github-api';
 import { createGitLabAPI, GitLabAPI } from './modules/gitlab-api';
 import { createShellAPI, ShellAPI } from './modules/shell-api';
+import { createModuleImportAPI, ModuleImportAPI } from './modules/module-import-api';
 
 /**
  * Combined Agent API interface
@@ -34,7 +35,8 @@ export interface AgentAPI extends
   LinearAPI,
   GitHubAPI,
   GitLabAPI,
-  ShellAPI {}
+  ShellAPI,
+  ModuleImportAPI {}
 
 /**
  * Creates the complete Agent API by combining all module APIs
@@ -51,6 +53,7 @@ export const createAgentAPI = (): AgentAPI => {
   const githubAPI = createGitHubAPI();
   const gitlabAPI = createGitLabAPI();
   const shellAPI = createShellAPI();
+  const moduleImportAPI = createModuleImportAPI();
 
   return {
     // Roadmap API
@@ -78,7 +81,10 @@ export const createAgentAPI = (): AgentAPI => {
     ...gitlabAPI,
 
     // Shell Operations API
-    ...shellAPI
+    ...shellAPI,
+
+    // Module Import API
+    ...moduleImportAPI
   };
 };
 
@@ -92,5 +98,6 @@ export type {
   LinearAPI,
   GitHubAPI,
   GitLabAPI,
-  ShellAPI
+  ShellAPI,
+  ModuleImportAPI
 };

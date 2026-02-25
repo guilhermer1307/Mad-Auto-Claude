@@ -366,5 +366,34 @@
   "referenceImages": {
     "title": "Reference Images (optional)",
     "description": "Add visual references like screenshots or designs to help the AI understand your requirements."
+  },
+  "moduleImport": {
+    "title": "Import Module",
+    "description": "Import a module folder from an external skills project into this project.",
+    "selectFolder": "Select Module Folder",
+    "browsePlaceholder": "Choose a module folder containing reviewed-to-be.md and tasks/",
+    "browse": "Browse",
+    "validating": "Validating module structure...",
+    "preview": {
+      "title": "Module Preview",
+      "moduleName": "Module",
+      "taskCount": "{{count}} tasks across {{phases}} phases",
+      "phase": "Phase {{number}}",
+      "tasks": "{{count}} tasks",
+      "dependsOn": "depends on Phase {{phases}}"
+    },
+    "importing": "Importing module...",
+    "import": "Import",
+    "complete": {
+      "title": "Import Complete",
+      "message": "Successfully imported {{count}} tasks as spec {{specId}}",
+      "viewOnBoard": "View on Board",
+      "startBuilding": "Start Building"
+    },
+    "errors": {
+      "invalidFolder": "Selected folder is not a valid module. It must contain reviewed-to-be.md and a tasks/ directory.",
+      "importFailed": "Module import failed: {{error}}",
+      "noProject": "No project selected"
+    }
   }
 }

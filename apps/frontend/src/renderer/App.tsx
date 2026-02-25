@@ -31,6 +31,7 @@ import { Sidebar, type SidebarView } from './components/Sidebar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { TaskDetailModal } from './components/task-detail/TaskDetailModal';
 import { TaskCreationWizard } from './components/TaskCreationWizard';
+import { ModuleImportModal } from './components/module-import';
 import { AppSettingsDialog, type AppSection } from './components/settings/AppSettings';
 import type { ProjectSettingsSection } from './components/settings/ProjectSettingsContent';
 import { TerminalGrid } from './components/TerminalGrid';
@@ -138,6 +139,7 @@ export function App() {
   // UI State
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
+  const [isModuleImportOpen, setIsModuleImportOpen] = useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState<AppSection | undefined>(undefined);
   const [settingsInitialProjectSection, setSettingsInitialProjectSection] = useState<ProjectSettingsSection | undefined>(undefined);
@@ -833,6 +835,7 @@ export function App() {
         <Sidebar
           onSettingsClick={() => setIsSettingsDialogOpen(true)}
           onNewTaskClick={() => setIsNewTaskDialogOpen(true)}
+          onImportModuleClick={() => setIsModuleImportOpen(true)}
           activeView={activeView}
           onViewChange={setActiveView}
         />
@@ -978,11 +981,18 @@ export function App() {
 
         {/* Dialogs */}
         {(activeProjectId || selectedProjectId) && (
-          <TaskCreationWizard
-            projectId={activeProjectId || selectedProjectId!}
-            open={isNewTaskDialogOpen}
-            onOpenChange={setIsNewTaskDialogOpen}
-          />
+          <>
+            <TaskCreationWizard
+              projectId={activeProjectId || selectedProjectId!}
+              open={isNewTaskDialogOpen}
+              onOpenChange={setIsNewTaskDialogOpen}
+            />
+            <ModuleImportModal
+              projectId={activeProjectId || selectedProjectId!}
+              open={isModuleImportOpen}
+              onOpenChange={setIsModuleImportOpen}
+            />
+          </>
         )}
 
         <AppSettingsDialog

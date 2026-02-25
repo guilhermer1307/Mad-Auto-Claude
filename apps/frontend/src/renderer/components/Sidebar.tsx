@@ -22,7 +22,8 @@ import {
   Heart,
   Wrench,
   PanelLeft,
-  PanelLeftClose
+  PanelLeftClose,
+  FolderInput
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
@@ -65,6 +66,7 @@ export type SidebarView = 'kanban' | 'terminals' | 'roadmap' | 'context' | 'idea
 interface SidebarProps {
   onSettingsClick: () => void;
   onNewTaskClick: () => void;
+  onImportModuleClick?: () => void;
   activeView?: SidebarView;
   onViewChange?: (view: SidebarView) => void;
 }
@@ -104,6 +106,7 @@ const gitlabNavItems: NavItem[] = [
 export function Sidebar({
   onSettingsClick,
   onNewTaskClick,
+  onImportModuleClick,
   activeView = 'kanban',
   onViewChange
 }: SidebarProps) {
@@ -488,6 +491,25 @@ export function Sidebar({
             </TooltipTrigger>
             {isCollapsed && (
               <TooltipContent side="right">{t('actions.newTask')}</TooltipContent>
+            )}
+          </Tooltip>
+
+          {/* Import Module button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className="w-full"
+                variant="outline"
+                size={isCollapsed ? "icon" : "default"}
+                onClick={onImportModuleClick}
+                disabled={!selectedProjectId || !selectedProject?.autoBuildPath}
+              >
+                <FolderInput className={isCollapsed ? "h-4 w-4" : "mr-2 h-4 w-4"} />
+                {!isCollapsed && t('actions.importModule')}
+              </Button>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">{t('actions.importModule')}</TooltipContent>
             )}
           </Tooltip>
           {!isCollapsed && selectedProject && !selectedProject.autoBuildPath && (

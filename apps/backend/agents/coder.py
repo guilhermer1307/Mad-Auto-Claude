@@ -483,6 +483,8 @@ async def run_autonomous_agent(
     planning_retry_context: str | None = None
     planning_validation_failures = 0
     max_planning_validation_retries = 3
+    planning_requirements_failures = 0
+    max_requirements_retries = 2
 
     def _validate_and_fix_implementation_plan() -> tuple[bool, list[str]]:
         from spec.validate_pkg import SpecValidator, auto_fix_plan
@@ -897,11 +899,67 @@ async def run_autonomous_agent(
             )
 
         plan_validated = False
+        requirements_verified = False
         if is_planning_phase and status != "error":
             valid, errors = _validate_and_fix_implementation_plan()
             if valid:
                 plan_validated = True
                 planning_retry_context = None
+
+                # === REQUIREMENTS COVERAGE VERIFICATION ===
+                from plan_verification import verify_plan_requirements_coverage
+
+                verification = verify_plan_requirements_coverage(spec_dir)
+                if verification.passed:
+                    requirements_verified = True
+                    print_status(
+                        f"Requirements coverage: {verification.coverage_percentage:.0f}% "
+                        f"({verification.method})",
+                        "success",
+                    )
+                else:
+                    planning_requirements_failures += 1
+                    uncovered_count = len(verification.uncovered_requirements)
+                    print_status(
+                        f"Requirements coverage: {verification.coverage_percentage:.0f}% "
+                        f"- {uncovered_count} uncovered ({verification.method})",
+                        "warning",
+                    )
+                    for req in verification.uncovered_requirements[:5]:
+                        print(f"  {muted('Uncovered:')} {req[:100]}")
+                    if uncovered_count > 5:
+                        print(muted(f"  ... and {uncovered_count - 5} more"))
+
+                    if planning_requirements_failures < max_requirements_retries:
+                        # Feed back to planner for another attempt
+                        planning_retry_context = (
+                            "## REQUIREMENTS COVERAGE GAPS\n\n"
+                            "The implementation plan does NOT cover all requirements.\n"
+                            f"Coverage: {verification.coverage_percentage:.0f}%\n\n"
+                            "The following requirements are NOT covered by any subtask:\n"
+                            + "\n".join(
+                                f"- {r}" for r in verification.uncovered_requirements
+                            )
+                            + "\n\nYou MUST add subtasks to cover ALL of these requirements.\n"
+                            "Update the `requirements_coverage` section accordingly."
+                        )
+                        # Stay in planning mode for re-planning
+                        first_run = True
+                        plan_validated = False
+                        status = "continue"
+                        print_status(
+                            f"Re-running planner to cover missing requirements "
+                            f"(attempt {planning_requirements_failures}/{max_requirements_retries})",
+                            "progress",
+                        )
+                    else:
+                        # Max retries reached — warn but proceed
+                        requirements_verified = True
+                        print_status(
+                            f"Proceeding with {uncovered_count} uncovered requirements "
+                            f"(max retries reached)",
+                            "warning",
+                        )
             else:
                 planning_validation_failures += 1
                 if planning_validation_failures >= max_planning_validation_retries:
