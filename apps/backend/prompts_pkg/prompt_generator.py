@@ -307,9 +307,52 @@ def _load_imported_task_context(spec_dir: Path, subtask: dict) -> str:
             "referenced by your task specification.\n"
         )
 
+    # Load coding patterns reference if it exists
+    _inject_coding_patterns_reference(spec_dir, sections)
+
     if sections:
         return "\n".join(sections)
     return ""
+
+
+def _inject_coding_patterns_reference(
+    spec_dir: Path,
+    sections: list[str],
+) -> None:
+    """
+    If the spec has coding patterns files in reference/, inject a section
+    directing the coder to read and follow them strictly.
+    """
+    reference_dir = spec_dir / "reference"
+    if not reference_dir.is_dir():
+        return
+
+    # Look for pattern/convention/guideline files in reference/
+    pattern_files = [
+        f
+        for f in reference_dir.iterdir()
+        if f.suffix == ".md"
+        and any(
+            kw in f.stem.lower()
+            for kw in ("pattern", "convention", "guideline", "code-style", "coding")
+        )
+    ]
+
+    if not pattern_files:
+        return
+
+    sections.append("## CODING PATTERNS & CONVENTIONS\n")
+    sections.append(
+        "**CRITICAL**: The project has specific coding patterns and conventions "
+        "that you MUST follow. Read these files before writing ANY code:\n"
+    )
+    for pf in sorted(pattern_files):
+        sections.append(f"- `reference/{pf.name}`")
+    sections.append(
+        "\nThese patterns define the project's architecture, naming conventions, "
+        "error handling, and code organization. Every file you create or modify "
+        "MUST follow these patterns exactly.\n"
+    )
 
 
 def generate_subtask_prompt(

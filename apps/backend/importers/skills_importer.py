@@ -691,4 +691,61 @@ def import_module(
     if readme.exists():
         shutil.copy2(readme, tasks_dest / "README.md")
 
+    # 10. Discover and copy coding patterns from the target project
+    _copy_project_coding_patterns(project_dir, spec_dir, reference_dir)
+
     return spec_dir
+
+
+def _copy_project_coding_patterns(
+    project_dir: Path,
+    spec_dir: Path,
+    reference_dir: Path,
+) -> None:
+    """
+    Search the target project for coding patterns/conventions docs
+    and copy them into the spec reference directory. Also generates
+    a coding_patterns.json that the coder agent will use.
+    """
+    # Common locations for coding pattern docs
+    pattern_candidates = [
+        "docs/CODING-PATTERNS.md",
+        "docs/coding-patterns.md",
+        "docs/CONVENTIONS.md",
+        "docs/conventions.md",
+        "docs/GUIDELINES.md",
+        "docs/guidelines.md",
+        "docs/CODE-STYLE.md",
+        "CODING-PATTERNS.md",
+        "CONVENTIONS.md",
+        "GUIDELINES.md",
+    ]
+
+    found_patterns: list[Path] = []
+    for candidate in pattern_candidates:
+        full_path = project_dir / candidate
+        if full_path.exists():
+            found_patterns.append(full_path)
+
+    if not found_patterns:
+        return
+
+    # Copy pattern files to reference directory
+    for pattern_file in found_patterns:
+        dest_name = pattern_file.name
+        shutil.copy2(pattern_file, reference_dir / dest_name)
+
+    # Generate coding_patterns.json pointing to these files
+    # This is read by the planner/coder prompt generator
+    patterns_json: dict[str, object] = {
+        "source": "module_import",
+        "pattern_files": [str(f.relative_to(project_dir)) for f in found_patterns],
+        "reference_copies": [f"reference/{f.name}" for f in found_patterns],
+        "conventions": [],
+        "patterns": [],
+    }
+
+    (spec_dir / "coding_patterns.json").write_text(
+        json.dumps(patterns_json, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
